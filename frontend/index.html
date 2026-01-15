@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Task Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Leaflet Geocoder -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="login-container" class="container">
+        <img src="assets/logo.png" alt="Nippon Express Logo"
+            style="max-width: 250px; display: block; margin: 0 auto 1.5rem auto;">
+        <h1>TMS System</h1>
+        <p>Please login to manage shipments</p>
+        <form id="login-form">
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="Enter your username" required>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Enter your password" required>
+            </div>
+            <button type="submit" class="save-btn">Login</button>
+            <p id="login-error" class="msg error"></p>
+        </form>
+    </div>
+
+    <div id="app-container" class="container" style="display: none;">
+        <header class="app-header">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <img src="assets/logo.png" alt="NX Logo" style="height: 40px;">
+            </div>
+            <div class="user-info">
+                <span>Welcome, <strong id="display-username"></strong></span>
+                <button id="logout-btn" class="logout-link">Log off</button>
+            </div>
+        </header>
+
+        <nav class="app-nav">
+            <button id="nav-dashboard" class="nav-btn" style="display: none;">Dashboard</button>
+            <button id="nav-shipments" class="nav-btn active">Shipments</button>
+            <button id="nav-trucks" class="nav-btn" style="display: none;">Trucks</button>
+            <button id="nav-profile" class="nav-btn">Profile</button>
+            <button id="nav-admin" class="nav-btn" style="display: none;">Admin</button>
+        </nav>
+
+        <main id="dashboard-view" style="display: none;">
+            <div class="view-header">
+                <h2>Operations Dashboard</h2>
+            </div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Shipments</div>
+                    <div class="kpi-value" id="kpi-total-shipments">-</div>
+                </div>
+                <!-- Volume -->
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Volume</div>
+                    <div class="kpi-value" id="kpi-total-volume">-</div>
+                    <div class="kpi-sub">m³</div>
+                </div>
+                <!-- Weight -->
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Weight</div>
+                    <div class="kpi-value" id="kpi-total-weight">-</div>
+                    <div class="kpi-sub">kg</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-label">Active Trucks</div>
+                    <div class="kpi-value" id="kpi-active-trucks">-</div>
+                    <div class="kpi-sub" id="kpi-total-trucks">of - total trucks</div>
+                </div>
+                <div class="kpi-card" style="border-top: 3px solid var(--accent);">
+                    <div class="kpi-label">In Transit</div>
+                    <div class="kpi-value" id="kpi-in-transit">-</div>
+                </div>
+                <div class="kpi-card" style="border-top: 3px solid var(--success);">
+                    <div class="kpi-label">Delivered</div>
+                    <div class="kpi-value" id="kpi-delivered">-</div>
+                </div>
+            </div>
+
+            <div class="chart-container"
+                style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 2rem; margin-top: 2rem; height: 400px; display: flex; justify-content: center;">
+                <canvas id="shipmentChart"></canvas>
+            </div>
+        </main>
+
+        <main id="shipments-view" style="display: none;">
+            <!-- Create View -->
+            <section class="shipment-input" style="display: none;">
+                <div class="card" style="max-width: 800px;">
+                    <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                        <button onclick="window.toggleShipmentView('list')" class="btn-secondary">&larr; Back</button>
+                        <h3 style="margin: 0;">Create New Shipment</h3>
+                    </div>
+                    <form id="shipment-form">
+                        <!-- Part 1: Cargo Info -->
+                        <h4>General Info</h4>
+                        <div class="input-grid">
+                            <input type="text" id="cargoName" placeholder="Cargo Name" required>
+                            <input type="text" id="description" placeholder="Description/Notes">
+                        </div>
+
+                        <!-- Part 2: Location -->
+                        <h4 style="margin-top: 1rem; margin-bottom: 0.5rem;">Route & Location</h4>
+                        <div class="sub-card"
+                            style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px; border: 1px dashed var(--border);">
+
+                            <!-- Origin Group -->
+                            <div style="margin-bottom: 1.5rem;">
+                                <label
+                                    style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--success); font-weight: 600;">ORIGIN
+                                    (Start)</label>
+                                <input type="text" id="origin" placeholder="Origin Address" required
+                                    style="margin-bottom: 0.5rem;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem;">
+                                    <input type="number" id="originLat" placeholder="Latitude" step="any" readonly
+                                        style="background: rgba(0,0,0,0.2);">
+                                    <input type="number" id="originLng" placeholder="Longitude" step="any" readonly
+                                        style="background: rgba(0,0,0,0.2);">
+                                    <button type="button" class="btn-secondary" onclick="window.openMapPicker('origin')"
+                                        style="white-space: nowrap;">📍 Map</button>
+                                </div>
+                            </div>
+
+                            <!-- Destination Group -->
+                            <div>
+                                <label
+                                    style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--danger); font-weight: 600;">DESTINATION
+                                    (End)</label>
+                                <input type="text" id="destination" placeholder="Destination Address" required
+                                    style="margin-bottom: 0.5rem;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem;">
+                                    <input type="number" id="destLat" placeholder="Latitude" step="any" readonly
+                                        style="background: rgba(0,0,0,0.2);">
+                                    <input type="number" id="destLng" placeholder="Longitude" step="any" readonly
+                                        style="background: rgba(0,0,0,0.2);">
+                                    <button type="button" class="btn-secondary" onclick="window.openMapPicker('dest')"
+                                        style="white-space: nowrap;">📍 Map</button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Part 3: Consignee -->
+                        <h4 style="margin-top: 1rem;">Consignee Details</h4>
+                        <div class="input-grid">
+                            <input type="text" id="consigneeName" placeholder="Consignee Name" required>
+                            <input type="text" id="consigneePhone" placeholder="Phone Number" required>
+                        </div>
+                        <textarea id="consigneeAddress" placeholder="Full Delivery Address"
+                            style="width: 100%; margin-top: 0.5rem; padding: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); border-radius: 8px;"
+                            required></textarea>
+                        <textarea id="deliveryRemark" placeholder="Delivery Remarks"
+                            style="width: 100%; margin-top: 0.5rem; padding: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); border-radius: 8px;"></textarea>
+
+                        <!-- Part 4: Cargo Details Builder -->
+                        <h4 style="margin-top: 1rem;">Cargo Items</h4>
+                        <div class="sub-card"
+                            style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px; border: 1px dashed var(--border);">
+                            <h4 style="margin-bottom: 0.5rem; color: var(--text-muted);">Cargo Items</h4>
+                            <div class="input-grid"
+                                style="grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label
+                                        style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Type</label>
+                                    <select id="itemType" style="width: 100%;">
+                                        <option value="Pallet">Pallet</option>
+                                        <option value="Box">Box</option>
+                                        <option value="Crate">Crate</option>
+                                        <option value="Drum">Drum</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label
+                                        style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Quantity</label>
+                                    <input type="number" id="itemQty" placeholder="Qty" value="1" style="width: 100%;">
+                                </div>
+                            </div>
+
+                            <label
+                                style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Volume
+                                (m³) & Weight (kg)</label>
+                            <div class="input-grid"
+                                style="grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <input type="number" id="itemVolume" placeholder="Volume (m³)" step="0.001"
+                                    style="text-align: center;">
+                                <input type="number" id="itemWeight" placeholder="Weight (kg)"
+                                    style="text-align: center;">
+                            </div>
+
+                            <button type="button" id="addItemBtn" class="add-btn"
+                                style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                                <span>+ Add Item</span>
+                            </button>
+                        </div>
+
+                        <div id="cargoItemsList"
+                            style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                            <!-- Items will be added here -->
+                        </div>
+
+                        <!-- Schedule (New) -->
+                        <div class="sub-card" style="margin-top: 1rem;">
+                            <h4 style="margin-bottom: 0.5rem; color: var(--text-muted);">Schedule</h4>
+                            <div class="input-grid">
+                                <div>
+                                    <label style="font-size: 0.8rem; color: var(--text-muted);">Pick Up Time (at
+                                        Origin)</label>
+                                    <input type="datetime-local" id="pickupTime" style="color-scheme: dark;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.8rem; color: var(--text-muted);">Delivery Time (at
+                                        Destination)</label>
+                                    <input type="datetime-local" id="deliveryTime" style="color-scheme: dark;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aggregates (Read Only) -->
+                        <div class="input-grid">
+                            <div>Total Weight (kg)<input type="number" id="totalWeight" readonly
+                                    style="background: transparent; border: none; font-weight: bold; color: var(--accent);">
+                            </div>
+                            <div>Total Volume (m³)<input type="number" id="totalVolume" readonly
+                                    style="background: transparent; border: none; font-weight: bold; color: var(--accent);">
+                            </div>
+                            <div>Pallets<input type="number" id="totalPallets" readonly
+                                    style="background: transparent; border: none;"></div>
+                            <div>Boxes<input type="number" id="totalBoxes" readonly
+                                    style="background: transparent; border: none;"></div>
+                        </div>
+
+                        <button type="submit" class="save-btn" style="width: 100%; margin-top: 1rem;">Create
+                            Shipment</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- List View -->
+            <section class="shipment-list-container">
+                <div class="view-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>All Shipments</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                        <label style="color: var(--text-muted); font-size: 0.9rem; margin-right: 0.2rem;">Create
+                            Date</label>
+                        <input type="date" id="filter-date-from" title="From Date"
+                            style="padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: var(--glass); color: var(--text);">
+                        <span style="color: var(--text-muted);">-</span>
+                        <input type="date" id="filter-date-to" title="To Date"
+                            style="padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: var(--glass); color: var(--text);">
+                        <button id="btn-create-shipment" onclick="window.toggleShipmentView('create')" class="save-btn"
+                            style="width: auto;">+ Create New Shipment</button>
+                    </div>
+                </div>
+                <!-- Search/Filter could go here -->
+                <div id="shipmentList" class="shipment-list"></div>
+            </section>
+        </main>
+
+        <main id="trucks-view" style="display: none;">
+            <div class="admin-header" style="margin-bottom: 2rem;">
+                <h1>Truck Management</h1>
+            </div>
+
+            <!-- Truck List Section -->
+            <section id="truck-list-section">
+                <div class="view-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>Fleet Overview</h2>
+                    <button onclick="window.toggleTruckView('create')" class="save-btn" style="width: auto;">+ Register
+                        New Truck</button>
+                </div>
+                <div class="card">
+                    <div class="table-container">
+                        <table id="truckTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>License Plate</th>
+                                    <th>Model</th>
+                                    <th>Capacity</th>
+                                    <th>Status</th>
+                                    <th>Driver</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="truckListBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Truck Form Section (Create/Edit) -->
+            <section id="truck-form-section" style="display: none;">
+                <div class="view-header"
+                    style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 1rem;">
+                    <button onclick="window.toggleTruckView('list')" class="btn-secondary" style="margin-right: 1rem;">←
+                        Back</button>
+                    <h3 id="truck-form-title">Register New Truck</h3>
+                </div>
+                <div class="card" style="max-width: 600px; margin: 0 auto;">
+                    <form id="truck-form">
+                        <!-- Basic Info -->
+                        <h4 style="color: var(--text-muted); margin-bottom: 0.5rem;">Basic Information</h4>
+                        <div class="input-grid" style="margin-bottom: 1.5rem;">
+                            <input type="text" id="licensePlate" placeholder="License Plate *" required>
+                            <input type="text" id="truckModel" placeholder="Model *" required>
+                            <input type="number" id="truckCapacity" placeholder="Capacity (kg)" step="0.1">
+                            <select id="truckType"
+                                style="padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--glass); color: var(--text);">
+                                <option value="">Select Truck Type</option>
+                                <option value="Box Truck">Box Truck</option>
+                                <option value="Flatbed">Flatbed</option>
+                                <option value="Refrigerated">Refrigerated</option>
+                                <option value="Tanker">Tanker</option>
+                                <option value="Container">Container</option>
+                                <option value="Pickup">Pickup</option>
+                            </select>
+                            <select id="fuelType"
+                                style="padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--glass); color: var(--text);">
+                                <option value="">Select Fuel Type</option>
+                                <option value="Diesel">Diesel</option>
+                                <option value="Gasoline">Gasoline</option>
+                                <option value="Electric">Electric</option>
+                                <option value="Hybrid">Hybrid</option>
+                                <option value="CNG">CNG</option>
+                            </select>
+                            <input type="number" id="truckYear" placeholder="Year (e.g. 2023)" min="1990" max="2030">
+                            <input type="text" id="truckVin" placeholder="VIN (Vehicle ID Number)">
+                            <input type="number" id="truckMileage" placeholder="Mileage (km)" min="0">
+                            <select id="containerSize"
+                                style="padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--glass); color: var(--text);">
+                                <option value="">Select Container Size</option>
+                                <option value="20ft">20ft</option>
+                                <option value="40ft">40ft</option>
+                                <option value="45ft">45ft</option>
+                                <option value="53ft">53ft</option>
+                            </select>
+                        </div>
+
+                        <!-- Assignment -->
+                        <h4 style="color: var(--text-muted); margin-bottom: 0.5rem;">Assignment</h4>
+                        <div class="input-grid" style="margin-bottom: 1.5rem;">
+                            <select id="truckDriver"
+                                style="padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--glass); color: var(--text);">
+                                <option value="">Select Driver (Optional)</option>
+                            </select>
+                        </div>
+
+                        <!-- Compliance -->
+                        <h4 style="color: var(--text-muted); margin-bottom: 0.5rem;">Compliance</h4>
+                        <div class="input-grid" style="margin-bottom: 1.5rem;">
+                            <div>
+                                <label
+                                    style="display: block; color: #aaa; font-size: 0.75rem; margin-bottom: 0.25rem;">Registration
+                                    Expiry</label>
+                                <input type="date" id="registrationExpiry" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label
+                                    style="display: block; color: #aaa; font-size: 0.75rem; margin-bottom: 0.25rem;">Insurance
+                                    Expiry</label>
+                                <input type="date" id="insuranceExpiry" style="width: 100%;">
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <h4 style="color: var(--text-muted); margin-bottom: 0.5rem;">Notes</h4>
+                        <textarea id="truckNotes" placeholder="Additional notes..." rows="3"
+                            style="width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--glass); color: var(--text); resize: vertical; margin-bottom: 1rem;"></textarea>
+
+                        <button type="submit" class="save-btn" style="width: 100%;">Save Truck</button>
+                        <p id="truck-msg" class="msg"></p>
+                    </form>
+                </div>
+            </section>
+        </main>
+
+
+        <main id="profile-view" style="display: none;">
+            <div class="card profile-card">
+                <h2>User Profile</h2>
+                <form id="profile-form">
+                    <div class="input-group">
+                        <label>Username</label>
+                        <input type="text" id="profile-username" disabled>
+                    </div>
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <input type="text" id="profile-name" placeholder="Enter your full name">
+                    </div>
+                    <div class="input-group">
+                        <label>Email Address</label>
+                        <input type="email" id="profile-email" placeholder="Enter your email">
+                    </div>
+                    <div class="input-group">
+                        <label>Current Role</label>
+                        <input type="text" id="profile-role" disabled>
+                    </div>
+                    <button type="submit" class="save-btn">Save Changes</button>
+                    <p id="profile-msg" class="msg"></p>
+                </form>
+            </div>
+        </main>
+
+        <main id="admin-management-view" style="display: none;">
+            <div class="admin-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1>User Management</h1>
+                <button id="btn-go-to-create" class="save-btn" style="width: auto; padding: 0.75rem 1.5rem;">Create New
+                    User</button>
+            </div>
+
+            <section class="admin-users">
+                <div class="card">
+                    <h3>Managed Users</h3>
+                    <div class="table-container">
+                        <table id="userTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userListBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <main id="admin-create-view" style="display: none;">
+            <div class="admin-header" style="display: flex; gap: 1rem; align-items: center; margin-bottom: 2rem;">
+                <button id="btn-back-to-mgmt" class="btn-secondary" style="padding: 0.5rem 1rem;">&larr; Back</button>
+                <h1>Create New User</h1>
+            </div>
+
+            <div class="card">
+                <form id="create-user-form">
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Username</label>
+                            <input type="text" id="new-username" placeholder="Username" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Password</label>
+                            <input type="password" id="new-password" placeholder="Password" required>
+                        </div>
+                    </div>
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Full Name</label>
+                            <input type="text" id="new-fullname" placeholder="Full Name" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Email Address</label>
+                            <input type="email" id="new-email" placeholder="Email Address" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Role</label>
+                        <select id="new-role">
+                            <option value="user">User</option>
+                            <option value="driver">Driver</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="save-btn">Save New User</button>
+                    <p id="create-user-msg" class="msg"></p>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content card">
+            <h2>Edit User</h2>
+            <form id="edit-user-form">
+                <input type="hidden" id="edit-user-id">
+                <div class="input-group">
+                    <label>Username (Read-only)</label>
+                    <input type="text" id="edit-username" disabled>
+                </div>
+                <div class="input-group">
+                    <label>Full Name</label>
+                    <input type="text" id="edit-fullname" required>
+                </div>
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="edit-email" required>
+                </div>
+                <div class="input-group">
+                    <label>Role</label>
+                    <select id="edit-role">
+                        <option value="user">User</option>
+                        <option value="driver">Driver</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="closeEditModal">Cancel</button>
+                    <button type="submit" class="save-btn">Update User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+
+
+    <!-- Map Picker Modal -->
+    <div id="mapModal" class="modal-overlay" style="display: none; z-index: 1000;">
+        <div class="modal-content card"
+            style="width: 90%; max-width: 800px; height: 80vh; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>Select Location</h3>
+                <button type="button" class="btn-secondary"
+                    onclick="document.getElementById('mapModal').style.display='none'">Close</button>
+            </div>
+            <div id="leafletMap" style="flex: 1; border-radius: 8px;"></div>
+            <p class="msg info" style="margin-top: 0.5rem;">Click on the map to select coordinates.</p>
+        </div>
+    </div>
+
+    <!-- Shipment Details Modal -->
+    <div id="detailsModal" class="modal-overlay" style="display: none; z-index: 1000;">
+        <div class="modal-content card"
+            style="width: 90%; max-width: 900px; height: 90vh; display: flex; flex-direction: column; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 id="detail-id">Shipment #00000</h2>
+                <button type="button" class="btn-secondary"
+                    onclick="document.getElementById('detailsModal').style.display='none'">Close</button>
+            </div>
+
+            <div id="detail-content" style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+                <!-- Manifest Info -->
+                <div>
+                    <div class="input-grid">
+                        <div><strong>Cargo:</strong> <span id="d-cargo"></span></div>
+                        <div><strong>Status:</strong> <span id="d-status"></span></div>
+                    </div>
+
+
+                    <div
+                        style="margin-top: 1rem; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                        <h4>Consignee</h4>
+                        <p><strong>Name:</strong> <span id="d-c-name"></span></p>
+                        <p><strong>Phone:</strong> <span id="d-c-phone"></span></p>
+                        <p><strong>Address:</strong> <span id="d-c-address"></span></p>
+                        <p><strong>Remark:</strong> <span id="d-c-remark"></span></p>
+                    </div>
+
+                    <!-- Trip Schedule & Locations -->
+                    <div
+                        style="margin-top: 1rem; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                        <div
+                            style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items: center;">
+                            <h4 style="margin:0;">Trip Details</h4>
+                            <div style="font-size:0.8rem; opacity:0.7;">Created: <span id="d-created"></span></div>
+                        </div>
+
+                        <div class="input-grid" style="gap: 2rem;">
+                            <!-- Origin / Pick Up -->
+                            <div>
+                                <div
+                                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; padding-bottom:0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <strong style="color:var(--success); font-size:1rem;">PICK UP</strong>
+                                    <a id="d-origin-map" href="#" target="_blank"
+                                        style="color:var(--accent); font-size:0.8rem; text-decoration:none;">View Map
+                                        ↗</a>
+                                </div>
+
+                                <div style="margin-bottom:0.8rem;">
+                                    <span
+                                        style="display:block; opacity:0.6; font-size:0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Time</span>
+                                    <strong id="d-pickup" style="font-size:1.05rem;"></strong>
+                                </div>
+
+                                <div style="margin-bottom:0.5rem;">
+                                    <span
+                                        style="display:block; opacity:0.6; font-size:0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Location</span>
+                                    <div id="d-origin-addr" style="font-size: 0.95rem;"></div>
+                                </div>
+
+                                <div style="font-size: 0.8rem; font-family: monospace; opacity: 0.5;">
+                                    <span id="d-origin-lat"></span>, <span id="d-origin-lng"></span>
+                                </div>
+                            </div>
+
+                            <!-- Destination / Delivery -->
+                            <div>
+                                <div
+                                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; padding-bottom:0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <strong style="color:var(--danger); font-size:1rem;">DELIVERY</strong>
+                                    <a id="d-dest-map" href="#" target="_blank"
+                                        style="color:var(--accent); font-size:0.8rem; text-decoration:none;">View Map
+                                        ↗</a>
+                                </div>
+
+                                <div style="margin-bottom:0.8rem;">
+                                    <span
+                                        style="display:block; opacity:0.6; font-size:0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Time</span>
+                                    <strong id="d-delivery" style="font-size:1.05rem;"></strong>
+                                </div>
+
+                                <div style="margin-bottom:0.5rem;">
+                                    <span
+                                        style="display:block; opacity:0.6; font-size:0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Location</span>
+                                    <div id="d-dest-addr" style="font-size: 0.95rem;"></div>
+                                </div>
+
+                                <div style="font-size: 0.8rem; font-family: monospace; opacity: 0.5;">
+                                    <span id="d-dest-lat"></span>, <span id="d-dest-lng"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top: 1rem;">Cargo Items</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem;">
+                        <thead style="background: rgba(255,255,255,0.1);">
+                            <tr>
+                                <th>Type</th>
+                                <th>Vol (m³)</th> <!-- Updated Header -->
+                                <th>Wgt (kg)</th>
+                                <th>Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody id="d-items-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Route Map -->
+                <div>
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h4 style="margin: 0;">Route Map</h4>
+                        <a id="btn-open-gmaps" href="#" target="_blank" class="btn-secondary"
+                            style="font-size: 0.8rem; padding: 0.4rem 0.8rem; text-decoration: none; display: flex; align-items: center; gap: 0.3rem;">
+                            <span>Open in Google Maps</span> ↗
+                        </a>
+                    </div>
+                    <div id="routeMap"
+                        style="width: 100%; height: 350px; border-radius: 12px; border: 1px solid var(--border);"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
