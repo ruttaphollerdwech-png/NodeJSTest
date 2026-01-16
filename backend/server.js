@@ -129,6 +129,13 @@ const initDB = async () => {
                 IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipments' AND COLUMN_NAME='is_deleted') THEN
                     ALTER TABLE shipments ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;
                 END IF;
+                -- Add POD fields
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipments' AND COLUMN_NAME='pod_signature') THEN
+                    ALTER TABLE shipments ADD COLUMN pod_signature TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipments' AND COLUMN_NAME='pod_image') THEN
+                    ALTER TABLE shipments ADD COLUMN pod_image TEXT;
+                END IF;
             END $$;
 
             -- Truck Module Table
@@ -207,7 +214,8 @@ const initDB = async () => {
 
 // Middleware
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
-app.use(express.json());
+// Increase JSON limit for image uploads
+app.use(express.json({ limit: '50mb' }));
 app.use(session({
     secret: 'secret-key-12345',
     resave: false,
@@ -388,7 +396,7 @@ app.put('/api/shipments/:id', isAuthenticated, async (req, res) => {
 });
 
 app.put('/api/shipments/:id/status', isAuthenticated, async (req, res) => {
-    const { status } = req.body;
+    const { status, pod_signature, pod_image } = req.body;
     const shipmentId = req.params.id;
     try {
         // Fetch shipment and joined truck details to verify driver ownership
@@ -415,7 +423,27 @@ app.put('/api/shipments/:id/status', isAuthenticated, async (req, res) => {
         }
         // Admin and User roles can update any shipment status (implicit permission)
 
-        const updateResult = await pool.query('UPDATE shipments SET status = $1 WHERE id = $2 RETURNING *', [status, shipmentId]);
+        let updateSql = 'UPDATE shipments SET status = $1';
+        let params = [status];
+        let paramIndex = 2;
+
+        if (status === 'Delivered') {
+            updateSql += `, delivery_time = NOW()`;
+
+            if (pod_signature) {
+                updateSql += `, pod_signature = $${paramIndex++}`;
+                params.push(pod_signature);
+            }
+            if (pod_image) {
+                updateSql += `, pod_image = $${paramIndex++}`;
+                params.push(pod_image);
+            }
+        }
+
+        updateSql += ` WHERE id = $${paramIndex} RETURNING *`;
+        params.push(shipmentId);
+
+        const updateResult = await pool.query(updateSql, params);
         res.json(updateResult.rows[0]);
     } catch (err) {
         console.error('[STATUS_UPDATE_ERROR]', err.message);
@@ -671,6 +699,17 @@ app.put('/api/admin/users/:id', isAdmin, async (req, res) => {
     }
 });
 
+app.put('/api/admin/users/:id/password', isAdmin, async (req, res) => {
+    const { password } = req.body;
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, req.params.id]);
+        res.json({ message: 'Password updated successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 
 
@@ -683,18 +722,30 @@ app.get('/api/dashboard', isAuthenticated, async (req, res) => {
 
     try {
         // Run aggregations in parallel
+        // 1. Shipment Status Stats (Last 30 Days)
         const shipmentsQuery = pool.query(
-            "SELECT status, COUNT(*) as count, SUM(total_volume) as vol, SUM(weight) as wgt FROM shipments WHERE is_deleted = FALSE GROUP BY status"
+            "SELECT status, COUNT(*) as count, SUM(total_volume) as vol, SUM(weight) as wgt FROM shipments WHERE is_deleted = FALSE AND created_at >= NOW() - INTERVAL '30 DAYS' GROUP BY status"
         );
 
+        // 2. Truck Stats (Current Snapshot - no time limit)
         const trucksQuery = pool.query(
             "SELECT COUNT(*) as total, SUM(CASE WHEN status = 'In Use' THEN 1 ELSE 0 END) as active FROM trucks"
         );
 
-        const results = await Promise.all([shipmentsQuery, trucksQuery]);
+        // 3. Timeline Stats (Last 30 Days grouped by day)
+        const timelineQuery = pool.query(`
+            SELECT TO_CHAR(created_at, 'YYYY-MM-DD') as day, COUNT(*) as count 
+            FROM shipments 
+            WHERE is_deleted = FALSE AND created_at >= NOW() - INTERVAL '30 DAYS'
+            GROUP BY day 
+            ORDER BY day ASC
+        `);
+
+        const results = await Promise.all([shipmentsQuery, trucksQuery, timelineQuery]);
 
         const shipmentStats = results[0].rows;
         const truckStats = results[1].rows[0];
+        const timelineStats = results[2].rows;
 
         // Format shipment data
         const stats = {
@@ -706,7 +757,8 @@ app.get('/api/dashboard', isAuthenticated, async (req, res) => {
             in_transit: 0,
             delivered: 0,
             total_trucks: parseInt(truckStats.total || 0),
-            active_trucks: parseInt(truckStats.active || 0)
+            active_trucks: parseInt(truckStats.active || 0),
+            timeline: timelineStats // Add timeline data to response
         };
 
         shipmentStats.forEach(row => {

@@ -56,6 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAuthStatus();
 
     let userRole = '';
+    let dashboardChart = null;
+    let timelineChart = null;
 
     // Navigation logic
     function deactivateAll() {
@@ -286,7 +288,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${user.full_name || '-'}</td>
                 <td>${user.email || '-'}</td>
                 <td><span class="status-badge" style="background: rgba(255,255,255,0.05)">${user.role}</span></td>
-                <td><button class="edit-btn" onclick='window.openEditModal(${JSON.stringify(user)})'>Edit</button></td>
+                <td>
+                    <button class="edit-btn" onclick='window.openEditModal(${JSON.stringify(user)})'>Edit</button>
+                    <button class="edit-btn" style="background: var(--accent); margin-left: 0.5rem;" onclick='window.openChangePasswordModal(${user.id})'>Pw</button>
+                </td>
             `;
             body.appendChild(tr);
         });
@@ -323,6 +328,47 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error('Error updating user:', err);
+        }
+    });
+
+
+    // --- Change Password Logic ---
+    const changePasswordModal = document.getElementById('changePasswordModal');
+    const changePasswordForm = document.getElementById('change-password-form');
+    const closeChangePasswordBtn = document.getElementById('closeChangePasswordModal');
+
+    window.openChangePasswordModal = (userId) => {
+        document.getElementById('cp-user-id').value = userId;
+        document.getElementById('cp-new-password').value = '';
+        changePasswordModal.style.display = 'flex';
+    };
+
+    closeChangePasswordBtn.addEventListener('click', () => {
+        changePasswordModal.style.display = 'none';
+    });
+
+    changePasswordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userId = document.getElementById('cp-user-id').value;
+        const password = document.getElementById('cp-new-password').value;
+
+        try {
+            const response = await fetch(`/api/admin/users/${userId}/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+
+            if (response.ok) {
+                alert('Password updated successfully');
+                changePasswordModal.style.display = 'none';
+            } else {
+                const data = await response.json();
+                alert('Failed to update password: ' + (data.message || data.error));
+            }
+        } catch (err) {
+            console.error('Error updating password:', err);
+            alert('Connection error');
         }
     });
 
@@ -945,18 +991,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (s.status === 'In Transit') {
-            html += `<button onclick="window.updateShipmentStatus(${s.id}, 'Delivered')" class="save-btn" style="padding: 0.5rem; margin-left: 0.5rem; font-size: 0.8rem; background: var(--success);">Complete</button>`;
+            html += `<button onclick="window.openPodModal(${s.id})" class="save-btn" style="padding: 0.5rem; margin-left: 0.5rem; font-size: 0.8rem; background: var(--success);">Complete</button>`;
         }
 
         return html;
     }
 
-    async function updateShipmentStatus(id, status) {
+    async function updateShipmentStatus(id, status, podSignature = null, podImage = null) {
         try {
             const response = await fetch(`/api/shipments/${id}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
+                body: JSON.stringify({ status, pod_signature: podSignature, pod_image: podImage })
             });
             if (response.ok) loadShipments();
         } catch (err) {
@@ -1204,6 +1250,33 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('d-c-address').textContent = d.consignee_address || '-';
         document.getElementById('d-c-remark').textContent = d.delivery_remark || '-';
 
+        // POD Section
+        const podSection = document.getElementById('d-pod-section');
+        const podSigContainer = document.getElementById('d-pod-sig-container');
+        const podImgContainer = document.getElementById('d-pod-img-container');
+        const podSigImg = document.getElementById('d-pod-signature');
+        const podImg = document.getElementById('d-pod-image');
+
+        if (d.status === 'Delivered' && (d.pod_signature || d.pod_image)) {
+            podSection.style.display = 'block';
+
+            if (d.pod_signature) {
+                podSigContainer.style.display = 'block';
+                podSigImg.src = d.pod_signature;
+            } else {
+                podSigContainer.style.display = 'none';
+            }
+
+            if (d.pod_image) {
+                podImgContainer.style.display = 'block';
+                podImg.src = d.pod_image;
+            } else {
+                podImgContainer.style.display = 'none';
+            }
+        } else {
+            podSection.style.display = 'none';
+        }
+
         // Schedule
         const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleString() : '-';
         document.getElementById('d-created').textContent = formatDate(d.created_at);
@@ -1339,7 +1412,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
-    let dashboardChart = null;
+
 
     async function loadDashboard() {
         try {
@@ -1356,12 +1429,19 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('kpi-in-transit').textContent = data.in_transit;
             document.getElementById('kpi-delivered').textContent = data.delivered;
 
-            // Render Chart
+            // Render Charts
+            console.log('Dashboard Data:', data);
             renderDashboardChart(data);
+            if (data.timeline) {
+                renderTimelineChart(data.timeline);
+            } else {
+                console.warn('No timeline data found');
+            }
         } catch (err) {
             console.error('Error loading dashboard:', err);
         }
     }
+
 
     function renderDashboardChart(data) {
         const ctx = document.getElementById('shipmentChart').getContext('2d');
@@ -1398,6 +1478,218 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function renderTimelineChart(timelineData) {
+        const ctx = document.getElementById('timelineChart').getContext('2d');
+
+        if (timelineChart) {
+            timelineChart.destroy();
+        }
+
+        // Process Data (ensure all days are represented or just plot available points)
+        // For simplicity, we plot available points. Ideally, we fill gaps.
+        const labels = timelineData.map(item => {
+            const d = new Date(item.day);
+            return `${d.getDate()}/${d.getMonth() + 1}`;
+        });
+        const counts = timelineData.map(item => parseInt(item.count));
+
+        timelineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Shipments',
+                    data: counts,
+                    borderColor: '#00b140', // Nippon Green
+                    backgroundColor: 'rgba(0, 177, 64, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4, // Smooth curves
+                    fill: true,
+                    pointBackgroundColor: '#002664',
+                    pointBorderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#888', stepSize: 1 },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    x: {
+                        ticks: { color: '#888' },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- ePOD (Electronic Proof of Delivery) Logic ---
+    let podModal, signaturePad, clearSigBtn, podImageInput, confirmDeliveryBtn, closePodModalBtn, sigCtx;
+    let isDrawing = false;
+    let pendingShipmentIdForPod = null;
+    let podImageBase64 = null;
+
+    // Initialize elements safely
+    function initPodElements() {
+        podModal = document.getElementById('podModal');
+        signaturePad = document.getElementById('signaturePad');
+        clearSigBtn = document.getElementById('clearSignature');
+        podImageInput = document.getElementById('podImageInput');
+        confirmDeliveryBtn = document.getElementById('confirmDeliveryBtn');
+        closePodModalBtn = document.getElementById('closePodModal');
+
+        if (signaturePad) {
+            sigCtx = signaturePad.getContext('2d');
+
+            // Events - Remove old if any (not easily possible with anonymous, but assignment overwrites if we were rigorous, here we just add new ones which is ok for single run)
+            // But to avoid duplicates on re-init, we rely on checking if elements exist.
+
+            signaturePad.addEventListener('mousedown', startDrawing);
+            signaturePad.addEventListener('mousemove', draw);
+            signaturePad.addEventListener('mouseup', stopDrawing);
+            signaturePad.addEventListener('mouseout', stopDrawing);
+            signaturePad.addEventListener('touchstart', startDrawing);
+            signaturePad.addEventListener('touchmove', draw);
+            signaturePad.addEventListener('touchend', stopDrawing);
+        }
+
+        if (clearSigBtn) clearSigBtn.onclick = clearSignature; // using onclick to override potential previous listeners
+        if (closePodModalBtn) closePodModalBtn.onclick = closePod;
+        if (podImageInput) podImageInput.onchange = handleImageUpload;
+        if (confirmDeliveryBtn) confirmDeliveryBtn.onclick = submitPod;
+    }
+
+    function clearSignature() {
+        if (sigCtx && signaturePad) sigCtx.clearRect(0, 0, signaturePad.width, signaturePad.height);
+    }
+
+    function closePod() {
+        if (podModal) podModal.style.display = 'none';
+        pendingShipmentIdForPod = null;
+    }
+
+    function handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Compress to JPEG 60%
+                podImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                const previewText = document.getElementById('imagePreviewText');
+                if (previewText) previewText.textContent = `Image loaded (${Math.round(podImageBase64.length / 1024)}KB)`;
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function submitPod() {
+        if (!pendingShipmentIdForPod) return;
+        const signatureData = signaturePad ? signaturePad.toDataURL() : null;
+
+        try {
+            await updateShipmentStatus(pendingShipmentIdForPod, 'Delivered', signatureData, podImageBase64);
+            closePod();
+            clearSignature();
+            if (podImageInput) podImageInput.value = '';
+            podImageBase64 = null;
+            const previewText = document.getElementById('imagePreviewText');
+            if (previewText) previewText.textContent = '';
+        } catch (err) {
+            alert('Failed to submit POD: ' + err.message);
+        }
+    }
+
+    // Drawing Functions
+    function getPos(e) {
+        const rect = signaturePad.getBoundingClientRect();
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        }
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    }
+
+    function startDrawing(e) {
+        e.preventDefault();
+        isDrawing = true;
+        const pos = getPos(e);
+        sigCtx.beginPath();
+        sigCtx.moveTo(pos.x, pos.y);
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        sigCtx.lineWidth = 2;
+        sigCtx.lineCap = 'round';
+        sigCtx.strokeStyle = '#000';
+        sigCtx.lineTo(pos.x, pos.y);
+        sigCtx.stroke();
+    }
+
+    function stopDrawing(e) {
+        if (isDrawing) {
+            isDrawing = false;
+        }
+    }
+
+    // Initialize
+    initPodElements();
+
+    // Expose Global
+    window.openPodModal = (shipmentId) => {
+        if (!podModal) {
+            console.error('POD Modal not initialized');
+            initPodElements(); // Try again
+            if (!podModal) {
+                alert('Error: ePOD Modal not found. Refresh page.');
+                return;
+            }
+        }
+        pendingShipmentIdForPod = shipmentId;
+        podModal.style.display = 'flex';
+        // Resize canvas
+        if (signaturePad && signaturePad.parentElement) {
+            const rect = signaturePad.parentElement.getBoundingClientRect();
+            signaturePad.width = rect.width;
+            signaturePad.height = 200;
+            // Re-get context to be safe if size changed drastically? No context persists.
+        }
+    };
 });
 
 
