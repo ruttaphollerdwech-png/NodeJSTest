@@ -188,6 +188,53 @@ const initDB = async () => {
                     ALTER TABLE trucks ADD COLUMN container_size VARCHAR(30);
                 END IF;
             END $$;
+
+            -- Shipment Legs Table for Multi-Stop Deliveries
+            CREATE TABLE IF NOT EXISTS shipment_legs (
+                id SERIAL PRIMARY KEY,
+                shipment_id INTEGER REFERENCES shipments(id) ON DELETE CASCADE,
+                leg_order INTEGER NOT NULL,
+                leg_type VARCHAR(20) NOT NULL,
+                location_name VARCHAR(200) NOT NULL,
+                location_lat DECIMAL,
+                location_lng DECIMAL,
+                consignee_name VARCHAR(100),
+                consignee_phone VARCHAR(50),
+                quantity INTEGER DEFAULT 0,
+                status VARCHAR(50) DEFAULT 'Pending',
+                completed_at TIMESTAMP,
+                pod_signature TEXT,
+                pod_image TEXT,
+                notes TEXT
+            );
+
+            -- Migration: Add multi-stop columns to shipments
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipments' AND COLUMN_NAME='is_multi_stop') THEN
+                    ALTER TABLE shipments ADD COLUMN is_multi_stop BOOLEAN DEFAULT FALSE;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipments' AND COLUMN_NAME='total_quantity') THEN
+                    ALTER TABLE shipments ADD COLUMN total_quantity INTEGER DEFAULT 0;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipments' AND COLUMN_NAME='remaining_quantity') THEN
+                    ALTER TABLE shipments ADD COLUMN remaining_quantity INTEGER DEFAULT 0;
+                END IF;
+                -- Add shipper columns to shipment_legs
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipment_legs' AND COLUMN_NAME='shipper_name') THEN
+                    ALTER TABLE shipment_legs ADD COLUMN shipper_name VARCHAR(100);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipment_legs' AND COLUMN_NAME='shipper_phone') THEN
+                    ALTER TABLE shipment_legs ADD COLUMN shipper_phone VARCHAR(50);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipment_legs' AND COLUMN_NAME='scheduled_time') THEN
+                    ALTER TABLE shipment_legs ADD COLUMN scheduled_time TIMESTAMP;
+                END IF;
+                -- Change quantity from INTEGER to TEXT for JSON storage
+                IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipment_legs' AND COLUMN_NAME='quantity' AND DATA_TYPE='integer') THEN
+                    ALTER TABLE shipment_legs ALTER COLUMN quantity TYPE TEXT USING quantity::TEXT;
+                END IF;
+            END $$;
         `);
 
 
@@ -320,7 +367,8 @@ app.post('/api/shipments', isAuthenticated, async (req, res) => {
         origin_lat, origin_lng, dest_lat, dest_lng,
         description, pallet_qty, box_qty, total_volume,
         consignee_name, consignee_phone, consignee_address, delivery_remark,
-        cargo_items, pickup_time, delivery_time
+        cargo_items, pickup_time, delivery_time,
+        is_multi_stop, total_quantity, remaining_quantity
     } = req.body;
     try {
         const result = await pool.query(
@@ -329,14 +377,16 @@ app.post('/api/shipments', isAuthenticated, async (req, res) => {
                 origin_lat, origin_lng, dest_lat, dest_lng,
                 description, pallet_qty, box_qty, total_volume,
                 consignee_name, consignee_phone, consignee_address, delivery_remark,
-                cargo_items, pickup_time, delivery_time
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *`,
+                cargo_items, pickup_time, delivery_time,
+                is_multi_stop, total_quantity, remaining_quantity
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING *`,
             [
                 cargo_name, origin, destination, weight, req.session.userId,
                 origin_lat || null, origin_lng || null, dest_lat || null, dest_lng || null,
                 description || '', pallet_qty || 0, box_qty || 0, total_volume || 0,
                 consignee_name || '', consignee_phone || '', consignee_address || '', delivery_remark || '',
-                JSON.stringify(cargo_items || []), pickup_time || null, delivery_time || null
+                JSON.stringify(cargo_items || []), pickup_time || null, delivery_time || null,
+                is_multi_stop || false, total_quantity || 0, remaining_quantity || 0
             ]
         );
         res.status(201).json(result.rows[0]);
@@ -515,6 +565,195 @@ app.put('/api/shipments/:id/assign', isAuthenticated, async (req, res) => {
     }
 });
 
+
+// Route / Milk Run API
+app.get('/api/routes/:truckId', isAuthenticated, async (req, res) => {
+    const truckId = req.params.truckId;
+    const { from, to } = req.query; // Get date filters
+
+    try {
+        let sql = `
+            SELECT * FROM shipments 
+            WHERE truck_id = $1 
+            AND status IN ('Assigned', 'In Transit')
+            AND is_deleted = FALSE
+        `;
+        const params = [truckId];
+        let paramIndex = 2;
+
+        if (from) {
+            sql += ` AND created_at >= $${paramIndex++}::DATE`;
+            params.push(from);
+        }
+        if (to) {
+            sql += ` AND created_at <= $${paramIndex++}::DATE + INTERVAL '1 day'`; // Include the full end day
+            params.push(to);
+        }
+
+        sql += ` ORDER BY pickup_time ASC NULLS LAST, created_at ASC`;
+
+        const result = await pool.query(sql, params);
+        const shipments = result.rows;
+
+        // Fetch legs for all shipments in one query for efficiency
+        if (shipments.length > 0) {
+            const shipmentIds = shipments.map(s => s.id);
+            const legsResult = await pool.query(
+                'SELECT * FROM shipment_legs WHERE shipment_id = ANY($1) ORDER BY shipment_id, leg_order ASC',
+                [shipmentIds]
+            );
+
+            // Group legs by shipment_id
+            const legsByShipment = {};
+            legsResult.rows.forEach(leg => {
+                if (!legsByShipment[leg.shipment_id]) {
+                    legsByShipment[leg.shipment_id] = [];
+                }
+                legsByShipment[leg.shipment_id].push(leg);
+            });
+
+            // Attach legs to each shipment
+            shipments.forEach(shipment => {
+                shipment.legs = legsByShipment[shipment.id] || [];
+            });
+        }
+
+        res.json(shipments);
+    } catch (err) {
+        console.error('[ROUTE_FETCH_ERROR]', err.message);
+        res.status(500).json({ error: 'Failed to fetch route data' });
+    }
+});
+
+// ============================================
+// Shipment Legs API (Multi-Stop Deliveries)
+// ============================================
+
+// GET all legs for a shipment
+app.get('/api/shipments/:id/legs', isAuthenticated, async (req, res) => {
+    const shipmentId = req.params.id;
+    try {
+        const result = await pool.query(
+            'SELECT * FROM shipment_legs WHERE shipment_id = $1 ORDER BY leg_order ASC',
+            [shipmentId]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[LEGS_GET_ERROR]', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST new leg to a shipment
+app.post('/api/shipments/:id/legs', isAuthenticated, async (req, res) => {
+    const shipmentId = req.params.id;
+    const { leg_order, leg_type, location_name, location_lat, location_lng, consignee_name, consignee_phone, shipper_name, shipper_phone, scheduled_time, quantity, notes } = req.body;
+
+    if (req.session.role === 'driver') {
+        return res.status(403).json({ message: 'Drivers cannot add delivery legs' });
+    }
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO shipment_legs 
+                (shipment_id, leg_order, leg_type, location_name, location_lat, location_lng, consignee_name, consignee_phone, shipper_name, shipper_phone, scheduled_time, quantity, notes)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+            [shipmentId, leg_order, leg_type, location_name, location_lat || null, location_lng || null, consignee_name || '', consignee_phone || '', shipper_name || '', shipper_phone || '', scheduled_time || null, quantity || 0, notes || '']
+        );
+
+        // Update shipment to mark as multi-stop
+        await pool.query('UPDATE shipments SET is_multi_stop = TRUE WHERE id = $1', [shipmentId]);
+
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[LEGS_POST_ERROR]', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PUT update a leg (status, POD, etc.)
+app.put('/api/shipments/:id/legs/:legId', isAuthenticated, async (req, res) => {
+    const { legId } = req.params;
+    const { status, quantity, pod_signature, pod_image, notes } = req.body;
+
+    try {
+        let updateFields = [];
+        let params = [];
+        let paramIndex = 1;
+
+        if (status !== undefined) {
+            updateFields.push(`status = $${paramIndex++}`);
+            params.push(status);
+            if (status === 'Completed') {
+                updateFields.push(`completed_at = NOW()`);
+            }
+        }
+        if (quantity !== undefined) {
+            updateFields.push(`quantity = $${paramIndex++}`);
+            params.push(quantity);
+        }
+        if (pod_signature !== undefined) {
+            updateFields.push(`pod_signature = $${paramIndex++}`);
+            params.push(pod_signature);
+        }
+        if (pod_image !== undefined) {
+            updateFields.push(`pod_image = $${paramIndex++}`);
+            params.push(pod_image);
+        }
+        if (notes !== undefined) {
+            updateFields.push(`notes = $${paramIndex++}`);
+            params.push(notes);
+        }
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({ message: 'No fields to update' });
+        }
+
+        params.push(legId);
+        const sql = `UPDATE shipment_legs SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+        const result = await pool.query(sql, params);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Leg not found' });
+        }
+
+        // If leg completed, update remaining quantity on shipment
+        if (status === 'Completed') {
+            const leg = result.rows[0];
+            if (leg.leg_type === 'delivery') {
+                await pool.query(
+                    'UPDATE shipments SET remaining_quantity = remaining_quantity - $1 WHERE id = $2',
+                    [leg.quantity, leg.shipment_id]
+                );
+            }
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('[LEGS_PUT_ERROR]', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE a leg
+app.delete('/api/shipments/:id/legs/:legId', isAuthenticated, async (req, res) => {
+    const { legId } = req.params;
+
+    if (req.session.role === 'driver') {
+        return res.status(403).json({ message: 'Drivers cannot delete delivery legs' });
+    }
+
+    try {
+        const result = await pool.query('DELETE FROM shipment_legs WHERE id = $1 RETURNING id', [legId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Leg not found' });
+        }
+        res.json({ message: 'Leg deleted', id: result.rows[0].id });
+    } catch (err) {
+        console.error('[LEGS_DELETE_ERROR]', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 app.get('/api/drivers', isAuthenticated, async (req, res) => {
     try {

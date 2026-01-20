@@ -13,11 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const navProfile = document.getElementById('nav-profile');
     const navAdmin = document.getElementById('nav-admin');
     const navDashboard = document.getElementById('nav-dashboard');
+    const navMilkrun = document.getElementById('nav-milkrun'); // New milkrun nav button
 
     const shipmentsView = document.getElementById('shipments-view');
     const trucksView = document.getElementById('trucks-view');
     const profileView = document.getElementById('profile-view');
     const dashboardView = document.getElementById('dashboard-view');
+    const milkrunView = document.getElementById('milkrun-view'); // New milkrun view
 
     const adminManagementView = document.getElementById('admin-management-view');
     const adminCreateView = document.getElementById('admin-create-view');
@@ -40,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (view === 'create') {
             inputSection.style.display = 'block';
             listSection.style.display = 'none';
+            // Initialize first delivery point if needed
+            if (window.initDeliveryPoints) window.initDeliveryPoints();
         } else {
             inputSection.style.display = 'none';
             listSection.style.display = 'block';
@@ -66,10 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
         navProfile.classList.remove('active');
         navAdmin.classList.remove('active');
         navDashboard.classList.remove('active');
+        navMilkrun.classList.remove('active'); // Added
         shipmentsView.style.display = 'none';
         trucksView.style.display = 'none';
         profileView.style.display = 'none';
         dashboardView.style.display = 'none';
+        milkrunView.style.display = 'none'; // Added
         adminManagementView.style.display = 'none';
         adminCreateView.style.display = 'none';
     }
@@ -108,6 +114,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         await loadDrivers(); // Needed for assignment
         await loadTrucks();
+    });
+
+    navMilkrun.addEventListener('click', async () => {
+        deactivateAll();
+        navMilkrun.classList.add('active');
+        milkrunView.style.display = 'block';
+
+        // Ensure trucks are loaded for the dropdown
+        if (typeof loadTrucks === 'function') {
+            await loadTrucks();
+        }
+
+        if (window.viewMilkRun) {
+            window.viewMilkRun();
+        }
     });
 
     navProfile.addEventListener('click', async () => {
@@ -391,6 +412,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Show Dashboard for Admin and User
                 navDashboard.style.display = (userRole === 'admin' || userRole === 'user') ? 'block' : 'none';
 
+                // Show Milk Run for Admin and User ONLY
+                navMilkrun.style.display = (userRole === 'admin' || userRole === 'user') ? 'block' : 'none';
+
                 console.log('Nav Trucks Display:', navTrucks.style.display);
                 showApp();
             } else {
@@ -482,103 +506,357 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCargoItems();
     };
 
-    // === MAP PICKER LOGIC ===
+    // === DELIVERY POINTS LOGIC (Unified - Always Active) ===
+    let deliveryPoints = [];
+    let deliveryPointIdCounter = 1;
+    let activeDeliveryMapId = null; // Track which delivery point is being map-picked
+
+    // Map picker shared variables
     let mapPicker = null;
     let mapPickerMarker = null;
-    let activeMapField = null; // 'origin' or 'dest'
+    let activeMapField = null; // 'origin' or delivery point
 
-    window.openMapPicker = (field) => {
-        activeMapField = field;
+    // Initialize first delivery point on form load
+    window.initDeliveryPoints = () => {
+        if (deliveryPoints.length === 0) {
+            window.addDeliveryPoint();
+        }
+    };
+
+    window.addDeliveryPoint = () => {
+        const id = deliveryPointIdCounter++;
+        const cargoAlloc = {};
+        cargoItems.forEach(item => {
+            const key = item.type;
+            if (!cargoAlloc[key]) cargoAlloc[key] = 0;
+        });
+        deliveryPoints.push({
+            id,
+            location: '',
+            lat: null,
+            lng: null,
+            cargoAlloc,
+            consignee: '',
+            phone: '',
+            estTime: ''
+        });
+        renderDeliveryPoints();
+    };
+
+    window.removeDeliveryPoint = (id) => {
+        // Prevent removing last delivery point
+        if (deliveryPoints.length <= 1) {
+            alert('At least one delivery point is required.');
+            return;
+        }
+        deliveryPoints = deliveryPoints.filter(p => p.id !== id);
+        renderDeliveryPoints();
+        window.validateCargoAllocation();
+    };
+
+    // Get unique cargo types from cargoItems
+    function getCargoTypeTotals() {
+        const totals = {};
+        cargoItems.forEach(item => {
+            const key = item.type;
+            totals[key] = (totals[key] || 0) + item.qty;
+        });
+        return totals;
+    }
+
+    function renderDeliveryPoints() {
+        const container = document.getElementById('deliveryPointsList');
+        container.innerHTML = '';
+
+        const cargoTotals = getCargoTypeTotals();
+        const cargoTypes = Object.keys(cargoTotals);
+
+        deliveryPoints.forEach((point, index) => {
+            // Ensure cargoAlloc has all current types
+            cargoTypes.forEach(type => {
+                if (point.cargoAlloc[type] === undefined) point.cargoAlloc[type] = 0;
+            });
+
+            const div = document.createElement('div');
+            div.style.cssText = 'background: rgba(239,68,68,0.1); padding: 1rem; border-radius: 12px; border-left: 4px solid var(--danger); margin-bottom: 0.5rem;';
+
+            // Build cargo inputs HTML
+            let cargoInputsHtml = '';
+            if (cargoTypes.length > 0) {
+                cargoInputsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 4px;">`;
+                cargoTypes.forEach(type => {
+                    const val = point.cargoAlloc[type] || 0;
+                    cargoInputsHtml += `
+                        <div style="display: flex; align-items: center; gap: 0.25rem;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">${type}:</span>
+                            <input type="number" min="0" value="${val}" 
+                                onchange="window.updateDeliveryCargoAlloc(${point.id}, '${type}', parseInt(this.value) || 0)" 
+                                style="width: 50px; text-align: center; padding: 0.25rem;">
+                        </div>
+                    `;
+                });
+                cargoInputsHtml += `</div>`;
+            }
+
+            // Check if this is the only delivery point (can't remove)
+            const canRemove = deliveryPoints.length > 1;
+            const removeBtn = canRemove
+                ? `<button type="button" onclick="window.removeDeliveryPoint(${point.id})" style="background: none; border: none; color: #ff4444; cursor: pointer; font-size: 1.2rem;">&times;</button>`
+                : '';
+
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <span style="font-weight: 600; color: var(--danger);">📍 Delivery ${index + 1}</span>
+                    ${removeBtn}
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <input type="text" id="delivery-addr-${point.id}" placeholder="Delivery Address" value="${point.location || ''}" 
+                        onchange="window.updateDeliveryPoint(${point.id}, 'location', this.value)" style="width: 100%;">
+                    <button type="button" class="btn-secondary" onclick="window.openDeliveryMapPicker(${point.id})" style="white-space: nowrap;">📍 Map</button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <input type="number" id="delivery-lat-${point.id}" placeholder="Latitude" value="${point.lat || ''}" readonly style="background: rgba(0,0,0,0.2); font-size: 0.85rem;">
+                    <input type="number" id="delivery-lng-${point.id}" placeholder="Longitude" value="${point.lng || ''}" readonly style="background: rgba(0,0,0,0.2); font-size: 0.85rem;">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <input type="text" placeholder="Consignee Name" value="${point.consignee || ''}" onchange="window.updateDeliveryPoint(${point.id}, 'consignee', this.value)">
+                    <input type="text" placeholder="Phone" value="${point.phone || ''}" onchange="window.updateDeliveryPoint(${point.id}, 'phone', this.value)">
+                </div>
+                <div style="margin-bottom: 0.5rem;">
+                    <input type="datetime-local" placeholder="Est. Delivery Time" value="${point.estTime || ''}" 
+                        onchange="window.updateDeliveryPoint(${point.id}, 'estTime', this.value)" style="width: 100%; color-scheme: dark;">
+                </div>
+                ${cargoInputsHtml}
+            `;
+            container.appendChild(div);
+        });
+
+        // Show allocation summary if there are cargo items
+        const summary = document.getElementById('quantitySummary');
+        if (cargoTypes.length > 0) {
+            summary.style.display = 'block';
+            window.validateCargoAllocation();
+        } else {
+            summary.style.display = 'none';
+        }
+    }
+
+    window.updateDeliveryPoint = (id, field, value) => {
+        const point = deliveryPoints.find(p => p.id === id);
+        if (point) {
+            point[field] = value;
+        }
+    };
+
+    window.updateDeliveryCargoAlloc = (id, cargoType, qty) => {
+        const point = deliveryPoints.find(p => p.id === id);
+        if (point) {
+            point.cargoAlloc[cargoType] = qty;
+            window.validateCargoAllocation();
+        }
+    };
+
+    window.validateCargoAllocation = () => {
+        const cargoTotals = getCargoTypeTotals();
+        const cargoTypes = Object.keys(cargoTotals);
+
+        let summaryHtml = '';
+        let allValid = true;
+
+        cargoTypes.forEach(type => {
+            const total = cargoTotals[type];
+            const allocated = deliveryPoints.reduce((sum, p) => sum + (p.cargoAlloc[type] || 0), 0);
+            const remaining = total - allocated;
+            const isOk = remaining === 0;
+            if (!isOk) allValid = false;
+
+            summaryHtml += `
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
+                    <span>${type}:</span>
+                    <span style="color: ${isOk ? 'var(--success)' : 'var(--danger)'};">
+                        ${allocated}/${total} (${remaining >= 0 ? remaining + ' left' : Math.abs(remaining) + ' over'})
+                    </span>
+                </div>
+            `;
+        });
+
+        document.getElementById('quantitySummary').innerHTML = summaryHtml || '<span style="color: var(--text-muted);">No cargo items</span>';
+    };
+
+    window.getDeliveryLegs = () => {
+        // Returns array of delivery legs with cargo allocation for API submission
+        return deliveryPoints.map((p, index) => ({
+            leg_order: index + 2, // 1 is pickup
+            leg_type: 'delivery',
+            location_name: p.location,
+            location_lat: p.lat,
+            location_lng: p.lng,
+            consignee_name: p.consignee,
+            consignee_phone: p.phone,
+            scheduled_time: p.estTime || null,
+            quantity: JSON.stringify(p.cargoAlloc), // Store as JSON
+            notes: Object.entries(p.cargoAlloc || {}).map(([k, v]) => `${v} ${k}`).join(', ')
+        }));
+    };
+
+    window.resetDeliveryPoints = () => {
+        deliveryPoints = [];
+        deliveryPointIdCounter = 1;
+        document.getElementById('deliveryPointsList').innerHTML = '';
+        document.getElementById('quantitySummary').style.display = 'none';
+        // Auto-add first delivery point after reset
+        window.addDeliveryPoint();
+    };
+
+    // Map picker for delivery points
+    window.openDeliveryMapPicker = (deliveryId) => {
+        activeDeliveryMapId = deliveryId;
+        activeMapField = null; // Clear origin mode
         const modal = document.getElementById('mapModal');
         modal.style.display = 'flex';
 
-        // Get current values if editing
-        const currentLat = parseFloat(document.getElementById(field + 'Lat').value);
-        const currentLng = parseFloat(document.getElementById(field + 'Lng').value);
+        const point = deliveryPoints.find(p => p.id === deliveryId);
+        const currentLat = point?.lat ? parseFloat(point.lat) : null;
+        const currentLng = point?.lng ? parseFloat(point.lng) : null;
 
-        // Get "Other" values (e.g. if picking Dest, look at Origin) for context
-        const otherField = field === 'origin' ? 'dest' : 'origin';
-        const otherLat = parseFloat(document.getElementById(otherField + 'Lat').value);
-        const otherLng = parseFloat(document.getElementById(otherField + 'Lng').value);
+        // Get origin for context
+        const originLat = parseFloat(document.getElementById('originLat').value);
+        const originLng = parseFloat(document.getElementById('originLng').value);
 
+        // Initialize map if not already done
         if (!mapPicker) {
-            mapPicker = L.map('leafletMap');
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(mapPicker);
+            initMapPicker();
+        }
 
-            // Add Search Control
+        // Clear existing marker
+        if (mapPickerMarker) mapPicker.removeLayer(mapPickerMarker);
+
+        // Focus on existing value
+        if (currentLat && currentLng) {
+            mapPicker.setView([currentLat, currentLng], 15);
+            mapPickerMarker = L.marker([currentLat, currentLng]).addTo(mapPicker);
+        } else if (!isNaN(originLat) && !isNaN(originLng)) {
+            mapPicker.setView([originLat, originLng], 13);
+        } else {
+            mapPicker.setView([13.7563, 100.5018], 10);
+        }
+
+        setTimeout(() => mapPicker.invalidateSize(), 200);
+    };
+
+    window.openMapPicker = (field) => {
+        activeMapField = field;
+        activeDeliveryMapId = null; // Clear delivery point selection
+        const modal = document.getElementById('mapModal');
+        modal.style.display = 'flex';
+
+        // Get current origin values
+        const currentLat = parseFloat(document.getElementById('originLat').value);
+        const currentLng = parseFloat(document.getElementById('originLng').value);
+
+        // Initialize map if not already done
+        if (!mapPicker) {
+            initMapPicker();
+        }
+
+        // Clear existing marker
+        if (mapPickerMarker) mapPicker.removeLayer(mapPickerMarker);
+
+        // Set view based on existing coordinates or default
+        if (!isNaN(currentLat) && !isNaN(currentLng)) {
+            mapPicker.setView([currentLat, currentLng], 15);
+            mapPickerMarker = L.marker([currentLat, currentLng]).addTo(mapPicker);
+        } else {
+            mapPicker.setView([13.7563, 100.5018], 10);
+        }
+
+        setTimeout(() => mapPicker.invalidateSize(), 200);
+    };
+
+    // Unified map initialization function
+    function initMapPicker() {
+        mapPicker = L.map('leafletMap');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(mapPicker);
+
+        // Add Search Control
+        try {
             L.Control.geocoder({
                 defaultMarkGeocode: false
             })
                 .on('markgeocode', function (e) {
-                    const { center, name, bbox } = e.geocode;
+                    const { center, name } = e.geocode;
                     const lat = center.lat;
                     const lng = center.lng;
 
-                    // Update View
                     mapPicker.setView([lat, lng], 16);
-
-                    // Update Marker
                     if (mapPickerMarker) mapPicker.removeLayer(mapPickerMarker);
                     mapPickerMarker = L.marker([lat, lng]).addTo(mapPicker);
 
-                    // Update Form Inputs
-                    if (activeMapField === 'origin') {
+                    // Update appropriate fields
+                    if (activeDeliveryMapId) {
+                        const pt = deliveryPoints.find(p => p.id === activeDeliveryMapId);
+                        if (pt) {
+                            pt.location = name;
+                            pt.lat = lat.toFixed(6);
+                            pt.lng = lng.toFixed(6);
+                            renderDeliveryPoints();
+                        }
+                    } else if (activeMapField === 'origin') {
                         document.getElementById('originLat').value = lat.toFixed(6);
                         document.getElementById('originLng').value = lng.toFixed(6);
                         const currentAddr = document.getElementById('origin').value;
                         if (!currentAddr || currentAddr.trim() === '') {
                             document.getElementById('origin').value = name;
                         }
-                    } else {
-                        document.getElementById('destLat').value = lat.toFixed(6);
-                        document.getElementById('destLng').value = lng.toFixed(6);
-                        const currentAddr = document.getElementById('destination').value;
-                        if (!currentAddr || currentAddr.trim() === '') {
-                            document.getElementById('destination').value = name;
-                        }
                     }
                 })
                 .addTo(mapPicker);
+        } catch (err) {
+            console.log('Geocoder control not available');
+        }
 
-            mapPicker.on('click', (e) => {
-                const { lat, lng } = e.latlng;
+        // Click handler for both origin and delivery points
+        mapPicker.on('click', async (e) => {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
 
-                if (mapPickerMarker) mapPicker.removeLayer(mapPickerMarker);
-                mapPickerMarker = L.marker([lat, lng]).addTo(mapPicker);
+            if (mapPickerMarker) mapPicker.removeLayer(mapPickerMarker);
+            mapPickerMarker = L.marker([lat, lng]).addTo(mapPicker);
 
-                if (activeMapField === 'origin') {
+            // Reverse geocode
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                const data = await response.json();
+                const address = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+                if (activeDeliveryMapId) {
+                    const pt = deliveryPoints.find(p => p.id === activeDeliveryMapId);
+                    if (pt) {
+                        pt.location = address;
+                        pt.lat = lat.toFixed(6);
+                        pt.lng = lng.toFixed(6);
+                        renderDeliveryPoints();
+                    }
+                } else if (activeMapField === 'origin') {
+                    document.getElementById('origin').value = address;
                     document.getElementById('originLat').value = lat.toFixed(6);
                     document.getElementById('originLng').value = lng.toFixed(6);
-                } else {
-                    document.getElementById('destLat').value = lat.toFixed(6);
-                    document.getElementById('destLng').value = lng.toFixed(6);
                 }
 
                 setTimeout(() => document.getElementById('mapModal').style.display = 'none', 500);
-            });
-        }
-
-        // Logic to set view
-        if (mapPickerMarker) mapPicker.removeLayer(mapPickerMarker);
-
-        // 1. Focus on existing value
-        if (!isNaN(currentLat) && !isNaN(currentLng)) {
-            mapPicker.setView([currentLat, currentLng], 15);
-            mapPickerMarker = L.marker([currentLat, currentLng]).addTo(mapPicker);
-        }
-        // 2. Focus on "Other" location (e.g. start at Origin when picking Dest)
-        else if (!isNaN(otherLat) && !isNaN(otherLng)) {
-            mapPicker.setView([otherLat, otherLng], 13);
-        }
-        // 3. Default
-        else {
-            mapPicker.setView([13.7563, 100.5018], 10);
-        }
-
-        setTimeout(() => mapPicker.invalidateSize(), 200);
-    };
+            } catch (err) {
+                console.error('Geocoding error:', err);
+                // Still set basic coordinates even if geocoding fails
+                if (activeMapField === 'origin') {
+                    document.getElementById('originLat').value = lat.toFixed(6);
+                    document.getElementById('originLng').value = lng.toFixed(6);
+                }
+                setTimeout(() => document.getElementById('mapModal').style.display = 'none', 500);
+            }
+        });
+    }
 
 
 
@@ -588,26 +866,38 @@ document.addEventListener('DOMContentLoaded', () => {
     shipmentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        // All shipments now use legs by default
+        const totalQty = cargoItems.reduce((sum, item) => sum + (item.qty || 0), 0);
+
+        // Get first delivery point for destination field (backward compatibility)
+        const firstDelivery = deliveryPoints[0] || {};
+
         const payload = {
             cargo_name: document.getElementById('cargoName').value,
             description: document.getElementById('description').value,
             origin: document.getElementById('origin').value,
             origin_lat: document.getElementById('originLat').value,
             origin_lng: document.getElementById('originLng').value,
-            destination: document.getElementById('destination').value,
-            dest_lat: document.getElementById('destLat').value,
-            dest_lng: document.getElementById('destLng').value,
-            weight: parseFloat(document.getElementById('totalWeight').value) || 0, // Master weight from calc
+            destination: deliveryPoints.length > 1 ? 'Multi-Stop' : (firstDelivery.location || ''),
+            dest_lat: firstDelivery.lat || null,
+            dest_lng: firstDelivery.lng || null,
+            weight: parseFloat(document.getElementById('totalWeight').value) || 0,
             total_volume: parseFloat(document.getElementById('totalVolume').value) || 0,
             pallet_qty: parseInt(document.getElementById('totalPallets').value) || 0,
             box_qty: parseInt(document.getElementById('totalBoxes').value) || 0,
-            consignee_name: document.getElementById('consigneeName').value,
-            consignee_phone: document.getElementById('consigneePhone').value,
-            consignee_address: document.getElementById('consigneeAddress').value,
+            consignee_name: deliveryPoints.length > 1 ? 'Multiple' : (firstDelivery.consignee || ''),
+            consignee_phone: firstDelivery.phone || '',
+            consignee_address: firstDelivery.location || '',
             delivery_remark: document.getElementById('deliveryRemark').value,
-            pickup_time: document.getElementById('pickupTime').value || null,
-            delivery_time: document.getElementById('deliveryTime').value || null,
-            cargo_items: cargoItems
+            shipper_name: document.getElementById('shipperName')?.value || '',
+            shipper_phone: document.getElementById('shipperPhone')?.value || '',
+            pickup_time: document.getElementById('pickupTime')?.value || null,
+            delivery_time: firstDelivery.estTime || null,
+            cargo_items: cargoItems,
+            // All shipments are now leg-based
+            is_multi_stop: true,
+            total_quantity: totalQty,
+            remaining_quantity: totalQty
         };
 
         try {
@@ -626,12 +916,60 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
+                const savedShipment = await response.json();
+
+                // Create or update legs
+                const shipmentId = editingShipmentId || savedShipment.id;
+
+                // If editing, delete old legs first
+                if (editingShipmentId) {
+                    try {
+                        const oldLegs = await fetch(`/api/shipments/${shipmentId}/legs`);
+                        if (oldLegs.ok) {
+                            const legsData = await oldLegs.json();
+                            for (const leg of legsData) {
+                                await fetch(`/api/shipments/${shipmentId}/legs/${leg.id}`, { method: 'DELETE' });
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error deleting old legs:', err);
+                    }
+                }
+
+                // Create pickup leg
+                await fetch(`/api/shipments/${shipmentId}/legs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        leg_order: 1,
+                        leg_type: 'pickup',
+                        location_name: document.getElementById('origin').value,
+                        location_lat: document.getElementById('originLat').value || null,
+                        location_lng: document.getElementById('originLng').value || null,
+                        shipper_name: document.getElementById('shipperName')?.value || null,
+                        shipper_phone: document.getElementById('shipperPhone')?.value || null,
+                        scheduled_time: document.getElementById('pickupTime')?.value || null,
+                        quantity: totalQty,
+                        notes: 'Pickup Point'
+                    })
+                });
+
+                // Create delivery legs
+                const legs = window.getDeliveryLegs();
+                for (const leg of legs) {
+                    await fetch(`/api/shipments/${shipmentId}/legs`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(leg)
+                    });
+                }
+
                 shipmentForm.reset();
                 cargoItems = [];
                 renderCargoItems();
-                editingShipmentId = null; // Reset edit mode
-                window.toggleShipmentView('list'); // Return to list view
-                // UX Improvement: Auto-refresh list after creation
+                window.resetDeliveryPoints();
+                editingShipmentId = null;
+                window.toggleShipmentView('list');
                 loadShipments();
             } else {
                 const errData = await response.json();
@@ -754,7 +1092,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDateFilter();
 
 
-    window.editShipment = (id) => {
+    window.editShipment = async (id) => {
         const shipment = allShipmentsData.find(s => s.id === id);
         if (!shipment) return;
 
@@ -765,37 +1103,87 @@ document.addEventListener('DOMContentLoaded', () => {
         const titleEl = document.querySelector('.shipment-input h3');
         if (titleEl) titleEl.textContent = `Edit Shipment #${String(id).padStart(5, '0')}`;
 
-        // Populate Inputs
+        // Populate basic inputs
         document.getElementById('cargoName').value = shipment.cargo_name;
         document.getElementById('description').value = shipment.description || '';
         document.getElementById('origin').value = shipment.origin;
         document.getElementById('originLat').value = shipment.origin_lat || '';
         document.getElementById('originLng').value = shipment.origin_lng || '';
-        document.getElementById('destination').value = shipment.destination;
-        document.getElementById('destLat').value = shipment.dest_lat || '';
-        document.getElementById('destLng').value = shipment.dest_lng || '';
-
-        document.getElementById('consigneeName').value = shipment.consignee_name || '';
-        document.getElementById('consigneePhone').value = shipment.consignee_phone || '';
-        document.getElementById('consigneeAddress').value = shipment.consignee_address || '';
         document.getElementById('deliveryRemark').value = shipment.delivery_remark || '';
 
-        // Dates (Check format matching datetime-local: YYYY-MM-DDTHH:MM)
-        // Helper to format Date obj to Input string
+        // Format date helper
         const toInputString = (dateStr) => {
             if (!dateStr) return '';
             const d = new Date(dateStr);
-            // Adjust to local ISO without Z
             const pad = (n) => String(n).padStart(2, '0');
             return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
         };
 
-        document.getElementById('pickupTime').value = toInputString(shipment.pickup_time);
-        document.getElementById('deliveryTime').value = toInputString(shipment.delivery_time);
-
         // Cargo Items
         cargoItems = shipment.cargo_items || [];
         renderCargoItems();
+
+        // Fetch legs from API
+        let legs = [];
+        try {
+            const legsRes = await fetch(`/api/shipments/${id}/legs`);
+            if (legsRes.ok) {
+                legs = await legsRes.json();
+            }
+        } catch (err) {
+            console.error('Error fetching legs for edit:', err);
+        }
+
+        // Populate pickup info from first pickup leg or shipment data
+        const pickupLeg = legs.find(l => l.leg_type === 'pickup');
+        if (pickupLeg) {
+            document.getElementById('shipperName').value = pickupLeg.shipper_name || '';
+            document.getElementById('shipperPhone').value = pickupLeg.shipper_phone || '';
+            document.getElementById('pickupTime').value = toInputString(pickupLeg.scheduled_time);
+        } else {
+            document.getElementById('shipperName').value = shipment.shipper_name || '';
+            document.getElementById('shipperPhone').value = shipment.shipper_phone || '';
+            document.getElementById('pickupTime').value = toInputString(shipment.pickup_time);
+        }
+
+        // Get delivery legs
+        const deliveryLegs = legs.filter(l => l.leg_type === 'delivery').sort((a, b) => a.leg_order - b.leg_order);
+
+        // Reset and populate delivery points
+        deliveryPoints = [];
+
+        if (deliveryLegs.length > 0) {
+            // Populate from legs
+            deliveryLegs.forEach((leg, index) => {
+                deliveryPoints.push({
+                    id: Date.now() + index,
+                    location: leg.location_name || '',
+                    lat: leg.location_lat || '',
+                    lng: leg.location_lng || '',
+                    consignee: leg.consignee_name || '',
+                    phone: leg.consignee_phone || '',
+                    estTime: toInputString(leg.scheduled_time),
+                    cargoAlloc: leg.quantity ? (typeof leg.quantity === 'string' ? JSON.parse(leg.quantity) : leg.quantity) : {}
+                });
+            });
+        } else if (shipment.destination) {
+            // Fallback to shipment destination data
+            deliveryPoints.push({
+                id: Date.now(),
+                location: shipment.destination || '',
+                lat: shipment.dest_lat || '',
+                lng: shipment.dest_lng || '',
+                consignee: shipment.consignee_name || '',
+                phone: shipment.consignee_phone || '',
+                estTime: toInputString(shipment.delivery_time),
+                cargoAlloc: {}
+            });
+        } else {
+            // Add empty first delivery point
+            window.addDeliveryPoint();
+        }
+
+        renderDeliveryPoints();
     };
 
     // Modification to toggleShipmentView to reset if passing 'create' without edit
@@ -1211,7 +1599,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let detailShipment = null;
 
     window.viewDetails = async (id) => {
-        const shipments = await (await fetch('/api/shipments')).json(); // Naive fetch again for simplicity, ideally lookup from local list
+        const shipments = await (await fetch('/api/shipments')).json();
         detailShipment = shipments.find(s => s.id === id);
 
         if (!detailShipment) return;
@@ -1221,34 +1609,128 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('d-cargo').textContent = d.cargo_name;
         document.getElementById('d-status').textContent = d.status;
 
-        // Locations
-        document.getElementById('d-origin-addr').textContent = d.origin;
-        document.getElementById('d-origin-lat').textContent = d.origin_lat || '-';
-        document.getElementById('d-origin-lng').textContent = d.origin_lng || '-';
-        const originMapBtn = document.getElementById('d-origin-map');
-        if (d.origin_lat && d.origin_lng) {
-            originMapBtn.href = `https://www.google.com/maps/search/?api=1&query=${d.origin_lat},${d.origin_lng}`;
-            originMapBtn.style.display = 'inline-flex';
-        } else {
-            originMapBtn.style.display = 'none';
+        // Format date helper
+        const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleString() : '-';
+        document.getElementById('d-created').textContent = formatDate(d.created_at);
+
+        // Fetch legs from API
+        let legs = [];
+        try {
+            const legsRes = await fetch(`/api/shipments/${id}/legs`);
+            if (legsRes.ok) {
+                legs = await legsRes.json();
+            }
+        } catch (err) {
+            console.error('Error fetching legs:', err);
         }
 
-        document.getElementById('d-dest-addr').textContent = d.destination;
-        document.getElementById('d-dest-lat').textContent = d.dest_lat || '-';
-        document.getElementById('d-dest-lng').textContent = d.dest_lng || '-';
-        const destMapBtn = document.getElementById('d-dest-map');
-        if (d.dest_lat && d.dest_lng) {
-            destMapBtn.href = `https://www.google.com/maps/search/?api=1&query=${d.dest_lat},${d.dest_lng}`;
-            destMapBtn.style.display = 'inline-flex';
-        } else {
-            destMapBtn.style.display = 'none';
+        // If no legs, create virtual legs from shipment data
+        if (legs.length === 0) {
+            // Add pickup leg
+            if (d.origin) {
+                legs.push({
+                    leg_type: 'pickup',
+                    leg_order: 1,
+                    location_name: d.origin,
+                    location_lat: d.origin_lat,
+                    location_lng: d.origin_lng,
+                    scheduled_time: d.pickup_time,
+                    shipper_name: d.shipper_name,
+                    shipper_phone: d.shipper_phone
+                });
+            }
+            // Add delivery leg
+            if (d.destination) {
+                legs.push({
+                    leg_type: 'delivery',
+                    leg_order: 2,
+                    location_name: d.destination,
+                    location_lat: d.dest_lat,
+                    location_lng: d.dest_lng,
+                    scheduled_time: d.delivery_time,
+                    consignee_name: d.consignee_name,
+                    consignee_phone: d.consignee_phone
+                });
+            }
         }
 
-        // Consignee
-        document.getElementById('d-c-name').textContent = d.consignee_name || '-';
-        document.getElementById('d-c-phone').textContent = d.consignee_phone || '-';
-        document.getElementById('d-c-address').textContent = d.consignee_address || '-';
-        document.getElementById('d-c-remark').textContent = d.delivery_remark || '-';
+        // Render legs dynamically
+        const legsContainer = document.getElementById('d-legs-container');
+        legsContainer.innerHTML = '';
+
+        legs.forEach((leg, index) => {
+            const isPickup = leg.leg_type === 'pickup';
+            const color = isPickup ? 'var(--success)' : 'var(--danger)';
+            const icon = isPickup ? '📦' : '📍';
+            const title = isPickup ? 'PICKUP' : `DELIVERY ${legs.filter(l => l.leg_type === 'delivery').indexOf(leg) + 1}`;
+
+            const name = isPickup ? (leg.shipper_name || '-') : (leg.consignee_name || '-');
+            const phone = isPickup ? (leg.shipper_phone || '-') : (leg.consignee_phone || '-');
+            const lat = parseFloat(leg.location_lat);
+            const lng = parseFloat(leg.location_lng);
+            const hasCoords = !isNaN(lat) && !isNaN(lng);
+            const mapLink = hasCoords ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : '#';
+
+            const legHtml = `
+                <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; border-left: 3px solid ${color};">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                        <strong style="color:${color}; font-size:0.95rem;">${icon} ${title}</strong>
+                        ${hasCoords ? `<a href="${mapLink}" target="_blank" style="color:var(--accent); font-size:0.75rem; text-decoration:none;">View Map ↗</a>` : ''}
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
+                        <div>
+                            <span style="opacity:0.6; font-size:0.75rem;">Location</span>
+                            <div>${leg.location_name || '-'}</div>
+                        </div>
+                        <div>
+                            <span style="opacity:0.6; font-size:0.75rem;">Time</span>
+                            <div>${formatDate(leg.scheduled_time || leg.completed_time)}</div>
+                        </div>
+                        <div>
+                            <span style="opacity:0.6; font-size:0.75rem;">${isPickup ? 'Shipper' : 'Consignee'}</span>
+                            <div>${name}</div>
+                        </div>
+                        <div>
+                            <span style="opacity:0.6; font-size:0.75rem;">Phone</span>
+                            <div>${phone}</div>
+                        </div>
+                    </div>
+                    ${hasCoords ? `<div style="font-size: 0.75rem; font-family: monospace; opacity: 0.5; margin-top: 0.5rem;">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>` : ''}
+                </div>
+            `;
+            legsContainer.innerHTML += legHtml;
+        });
+
+        // Build Google Maps route URL with all waypoints
+        const routeBtn = document.getElementById('btn-view-route-gmaps');
+        const openGmapsBtn = document.getElementById('btn-open-gmaps'); // Route Map section button
+        const validLegs = legs.filter(l => {
+            const lat = parseFloat(l.location_lat);
+            const lng = parseFloat(l.location_lng);
+            return !isNaN(lat) && !isNaN(lng);
+        });
+
+        if (validLegs.length >= 2) {
+            const origin = `${validLegs[0].location_lat},${validLegs[0].location_lng}`;
+            const destination = `${validLegs[validLegs.length - 1].location_lat},${validLegs[validLegs.length - 1].location_lng}`;
+            const waypoints = validLegs.slice(1, -1).map(l => `${l.location_lat},${l.location_lng}`).join('|');
+
+            let gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+            if (waypoints) {
+                gmapsUrl += `&waypoints=${waypoints}`;
+            }
+            if (routeBtn) {
+                routeBtn.href = gmapsUrl;
+                routeBtn.style.display = 'inline-flex';
+            }
+            if (openGmapsBtn) {
+                openGmapsBtn.href = gmapsUrl;
+                openGmapsBtn.style.display = 'inline-flex';
+            }
+        } else {
+            if (routeBtn) routeBtn.style.display = 'none';
+            if (openGmapsBtn) openGmapsBtn.style.display = 'none';
+        }
 
         // POD Section
         const podSection = document.getElementById('d-pod-section');
@@ -1259,14 +1741,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (d.status === 'Delivered' && (d.pod_signature || d.pod_image)) {
             podSection.style.display = 'block';
-
             if (d.pod_signature) {
                 podSigContainer.style.display = 'block';
                 podSigImg.src = d.pod_signature;
             } else {
                 podSigContainer.style.display = 'none';
             }
-
             if (d.pod_image) {
                 podImgContainer.style.display = 'block';
                 podImg.src = d.pod_image;
@@ -1275,27 +1755,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             podSection.style.display = 'none';
-        }
-
-        // Schedule
-        const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleString() : '-';
-        document.getElementById('d-created').textContent = formatDate(d.created_at);
-        document.getElementById('d-pickup').textContent = formatDate(d.pickup_time);
-        document.getElementById('d-delivery').textContent = formatDate(d.delivery_time);
-
-        // Update Google Maps Link
-        const gmapsBtn = document.getElementById('btn-open-gmaps');
-        if (gmapsBtn) {
-            const glat1 = parseFloat(d.origin_lat);
-            const glng1 = parseFloat(d.origin_lng);
-            const glat2 = parseFloat(d.dest_lat);
-            const glng2 = parseFloat(d.dest_lng);
-            if (!isNaN(glat1) && !isNaN(glng1) && !isNaN(glat2) && !isNaN(glng2)) {
-                gmapsBtn.href = `https://www.google.com/maps/dir/?api=1&origin=${glat1},${glng1}&destination=${glat2},${glng2}&travelmode=driving`;
-                gmapsBtn.style.display = 'inline-flex';
-            } else {
-                gmapsBtn.style.display = 'none';
-            }
         }
 
         // Items
@@ -1316,49 +1775,40 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.innerHTML = '<tr><td colspan="4" style="padding: 1rem; text-align: center; opacity: 0.5;">No cargo details logged</td></tr>';
         }
 
-        // Map
+        // Map with multi-leg route
         if (routeMap) {
             routeMap.off();
-            routeMap.remove(); // Reset map
+            routeMap.remove();
         }
 
-        // 1. Initialize map centered on South East Asia (Thailand)
         routeMap = L.map('routeMap').setView([13.7563, 100.5018], 6);
-
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(routeMap);
 
         document.getElementById('detailsModal').style.display = 'flex';
 
-        // 2. Wait for modal transition/render, then fix size and add route
+        // Wait for modal, then add route with all waypoints
         setTimeout(() => {
             if (routeMap) {
                 routeMap.invalidateSize();
 
-                const lat1 = parseFloat(d.origin_lat);
-                const lng1 = parseFloat(d.origin_lng);
-                const lat2 = parseFloat(d.dest_lat);
-                const lng2 = parseFloat(d.dest_lng);
+                const waypoints = validLegs.map(l => L.latLng(parseFloat(l.location_lat), parseFloat(l.location_lng)));
 
-                if (!isNaN(lat1) && !isNaN(lng1) && !isNaN(lat2) && !isNaN(lng2)) {
+                if (waypoints.length >= 2) {
                     L.Routing.control({
-                        waypoints: [
-                            L.latLng(lat1, lng1),
-                            L.latLng(lat2, lng2)
-                        ],
+                        waypoints: waypoints,
                         routeWhileDragging: false,
                         show: false,
                         addWaypoints: false,
                         draggableWaypoints: false,
-                        fitSelectedRoutes: true, // This should work correctly now that map size is known
+                        fitSelectedRoutes: true,
                         lineOptions: {
                             styles: [{ color: 'blue', opacity: 0.6, weight: 6 }]
                         },
                         createMarker: function (i, wp, nWps) {
-                            if (i === 0) return L.marker(wp.latLng).bindPopup("<b>Origin</b>");
-                            if (i === nWps - 1) return L.marker(wp.latLng).bindPopup("<b>Destination</b>");
-                            return null;
+                            if (i === 0) return L.marker(wp.latLng, { icon: L.divIcon({ className: 'route-marker', html: '<div style="background:var(--success);color:white;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:bold;">P</div>' }) }).bindPopup("<b>Pickup</b>");
+                            return L.marker(wp.latLng, { icon: L.divIcon({ className: 'route-marker', html: `<div style="background:var(--danger);color:white;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:bold;">${i}</div>` }) }).bindPopup(`<b>Delivery ${i}</b>`);
                         }
                     }).addTo(routeMap);
                 }
@@ -1624,6 +2074,215 @@ document.addEventListener('DOMContentLoaded', () => {
             if (previewText) previewText.textContent = '';
         } catch (err) {
             alert('Failed to submit POD: ' + err.message);
+        }
+    }
+
+    // --- Milk Run (Route Planner) Logic ---
+    let milkRunMap = null;
+    let milkRunRoutingControl = null;
+
+    window.viewMilkRun = () => {
+        // Init Defaults if not set
+        const fromDateInput = document.getElementById('mr-from-date');
+        if (!fromDateInput.value) {
+            // Set Default Dates: From = Today-3, To = Today
+            const today = new Date();
+            const past = new Date();
+            past.setDate(today.getDate() - 3);
+
+            const formatDateVal = (date) => date.toISOString().split('T')[0];
+            document.getElementById('mr-to-date').value = formatDateVal(today);
+            document.getElementById('mr-from-date').value = formatDateVal(past);
+        }
+
+        // Populate Truck Select
+        const select = document.getElementById('routeTruckSelect');
+        select.innerHTML = '<option value="">-- Select Truck --</option>' +
+            trucks.map(t => `<option value="${t.id}">${t.license_plate} (${t.model})</option>`).join('');
+
+        // Init Map if needed
+        if (!milkRunMap) {
+            milkRunMap = L.map('milkRunMap').setView([13.7563, 100.5018], 8);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(milkRunMap);
+        }
+        setTimeout(() => milkRunMap.invalidateSize(), 300);
+    };
+
+    window.reloadMilkRunRoute = () => {
+        const truckId = document.getElementById('routeTruckSelect').value;
+        if (truckId) loadRouteForTruck(truckId);
+    };
+
+    window.loadRouteForTruck = async (truckId) => {
+        if (!truckId) {
+            document.getElementById('routeStopList').innerHTML = '<p class="msg info">Select a truck to view its route.</p>';
+            if (milkRunRoutingControl) {
+                milkRunMap.removeControl(milkRunRoutingControl);
+                milkRunRoutingControl = null;
+            }
+            return;
+        }
+
+        const fromDate = document.getElementById('mr-from-date').value;
+        const toDate = document.getElementById('mr-to-date').value;
+
+        try {
+            let url = `/api/routes/${truckId}`;
+            const params = new URLSearchParams();
+            if (fromDate) params.append('from', fromDate);
+            if (toDate) params.append('to', toDate);
+            if (params.toString()) url += `?${params.toString()}`;
+
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Failed to fetch route');
+            const shipments = await res.json();
+
+            renderMilkRunRoute(shipments);
+        } catch (err) {
+            console.error(err);
+            alert('Error loading route: ' + err.message);
+        }
+    };
+
+    function renderMilkRunRoute(shipments) {
+        const stopList = document.getElementById('routeStopList');
+        stopList.innerHTML = '';
+
+        if (shipments.length === 0) {
+            stopList.innerHTML = '<p class="msg info">No active shipments for this selection.</p>';
+            if (milkRunRoutingControl) {
+                milkRunMap.removeControl(milkRunRoutingControl);
+                milkRunRoutingControl = null;
+            }
+            return;
+        }
+
+        // Build Waypoints from shipment legs (multi-drop support)
+        // If shipment has legs, use them; otherwise fall back to origin/destination
+        const waypoints = [];
+        const waypointMeta = []; // Track type for each waypoint (for marker styling)
+        let stopCount = 1;
+
+        // Date formatter: 16/01/2026 14:30
+        const formatFullDT = (isoStr) => {
+            if (!isoStr) return '-';
+            const d = new Date(isoStr);
+            return d.getDate().toString().padStart(2, '0') + '/' +
+                (d.getMonth() + 1).toString().padStart(2, '0') + '/' +
+                d.getFullYear() + ' ' +
+                d.getHours().toString().padStart(2, '0') + ':' +
+                d.getMinutes().toString().padStart(2, '0');
+        };
+
+        shipments.forEach(s => {
+            // Check if shipment has legs (multi-drop)
+            if (s.legs && s.legs.length > 0) {
+                // Use legs for stops
+                s.legs.forEach((leg, legIndex) => {
+                    const isPickup = leg.leg_type === 'pickup';
+                    const borderColor = isPickup ? 'var(--success)' : 'var(--danger)';
+                    const typeLabel = isPickup ? 'PICKUP' : 'DROP OFF';
+                    const contactName = isPickup ? (leg.shipper_name || '-') : (leg.consignee_name || '-');
+                    const contactPhone = isPickup ? (leg.shipper_phone || '') : (leg.consignee_phone || '');
+
+                    const legDiv = document.createElement('div');
+                    legDiv.style.cssText = `padding: 0.8rem; background: rgba(255,255,255,0.05); border-left: 3px solid ${borderColor}; border-radius: 4px;`;
+                    legDiv.innerHTML = `
+                        <div style="font-weight: bold; font-size: 0.9rem;">${stopCount}. ${typeLabel}</div>
+                        <div style="font-size: 0.8rem; margin-bottom: 0.2rem;">
+                             <span onclick="window.viewDetails(${s.id})" style="cursor: pointer; color: blue; text-decoration: underline;">Shipment #${String(s.id).padStart(5, '0')}</span>
+                        </div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">${leg.location_name || '-'}</div>
+                        <div style="font-size: 0.75rem; color: #aaa;">${contactName}${contactPhone ? ' • ' + contactPhone : ''}</div>
+                        <div style="font-size: 0.75rem; color: #888;">${formatFullDT(leg.scheduled_time || leg.created_at)}</div>
+                    `;
+                    stopList.appendChild(legDiv);
+
+                    // Add waypoint if coordinates exist
+                    const lat = parseFloat(leg.location_lat);
+                    const lng = parseFloat(leg.location_lng);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        waypoints.push(L.latLng(lat, lng));
+                        waypointMeta.push({ type: leg.leg_type, stopNumber: stopCount });
+                    }
+                    stopCount++;
+                });
+            } else {
+                // Fallback: Use origin/destination (legacy shipments without legs)
+                // 1. Pickup
+                const pDiv = document.createElement('div');
+                pDiv.style.cssText = 'padding: 0.8rem; background: rgba(255,255,255,0.05); border-left: 3px solid var(--success); border-radius: 4px;';
+                pDiv.innerHTML = `
+                    <div style="font-weight: bold; font-size: 0.9rem;">${stopCount}. PICKUP</div>
+                    <div style="font-size: 0.8rem; margin-bottom: 0.2rem;">
+                         <span onclick="window.viewDetails(${s.id})" style="cursor: pointer; color: blue; text-decoration: underline;">Shipment #${String(s.id).padStart(5, '0')}</span>
+                    </div>
+                    <div style="font-size: 0.8rem; opacity: 0.8;">${s.cargo_name} (${s.origin})</div>
+                    <div style="font-size: 0.75rem; color: #aaa;">${s.weight}kg • ${formatFullDT(s.pickup_time || s.created_at)}</div>
+                `;
+                stopList.appendChild(pDiv);
+
+                if (s.origin_lat && s.origin_lng) {
+                    waypoints.push(L.latLng(s.origin_lat, s.origin_lng));
+                    waypointMeta.push({ type: 'pickup', stopNumber: stopCount });
+                }
+                stopCount++;
+
+                // 2. Delivery
+                const dDiv = document.createElement('div');
+                dDiv.style.cssText = 'padding: 0.8rem; background: rgba(255,255,255,0.05); border-left: 3px solid var(--danger); border-radius: 4px;';
+                dDiv.innerHTML = `
+                    <div style="font-weight: bold; font-size: 0.9rem;">${stopCount}. DROP OFF</div>
+                    <div style="font-size: 0.8rem; margin-bottom: 0.2rem;">
+                         <span onclick="window.viewDetails(${s.id})" style="cursor: pointer; color: blue; text-decoration: underline;">Shipment #${String(s.id).padStart(5, '0')}</span>
+                    </div>
+                    <div style="font-size: 0.8rem; opacity: 0.8;">${s.destination}</div>
+                    <div style="font-size: 0.75rem; color: #aaa;">${formatFullDT(s.delivery_time || Date.now())}</div>
+                `;
+                stopList.appendChild(dDiv);
+
+                if (s.dest_lat && s.dest_lng) {
+                    waypoints.push(L.latLng(s.dest_lat, s.dest_lng));
+                    waypointMeta.push({ type: 'delivery', stopNumber: stopCount });
+                }
+                stopCount++;
+            }
+        });
+
+        // Draw Route
+        if (milkRunRoutingControl) {
+            milkRunMap.removeControl(milkRunRoutingControl);
+        }
+
+        if (waypoints.length >= 2) {
+            milkRunRoutingControl = L.Routing.control({
+                waypoints: waypoints,
+                routeWhileDragging: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: true,
+                show: false, // Don't show text instructions on map
+                createMarker: function (i, wp, nWps) {
+                    // Use waypointMeta to determine type and color
+                    const meta = waypointMeta[i] || { type: 'delivery', stopNumber: i + 1 };
+                    const isPickup = meta.type === 'pickup';
+                    const color = isPickup ? '#00b140' : '#ff4444';
+                    const typeLabel = isPickup ? 'PICKUP' : 'DROP OFF';
+                    return L.marker(wp.latLng, {
+                        icon: L.divIcon({
+                            className: 'custom-icon',
+                            html: `<div style="background: ${color}; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 2px solid white;">${meta.stopNumber}</div>`,
+                            iconSize: [24, 24]
+                        })
+                    }).bindPopup(`<b>Stop ${meta.stopNumber}: ${typeLabel}</b>`);
+                },
+                lineOptions: {
+                    styles: [{ color: '#3498db', opacity: 0.8, weight: 6 }]
+                }
+            }).addTo(milkRunMap);
+        } else {
+            stopList.innerHTML += '<p class="msg error">Not enough location data to map route.</p>';
         }
     }
 

@@ -55,6 +55,7 @@
         <nav class="app-nav">
             <button id="nav-dashboard" class="nav-btn" style="display: none;">Dashboard</button>
             <button id="nav-shipments" class="nav-btn active">Shipments</button>
+            <button id="nav-milkrun" class="nav-btn">Milk Run</button>
             <button id="nav-trucks" class="nav-btn" style="display: none;">Trucks</button>
             <button id="nav-profile" class="nav-btn">Profile</button>
             <button id="nav-admin" class="nav-btn" style="display: none;">Admin</button>
@@ -111,6 +112,51 @@
             </div>
         </main>
 
+        <!-- Milk Run / Route Planner View -->
+        <main id="milkrun-view" style="display: none; height: calc(100vh - 60px);">
+            <div class="card" style="width: 100%; height: 100%; display: flex; flex-direction: column; padding: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>Milk Run Route Planner</h2>
+                </div>
+
+                <div style="display: flex; gap: 1rem; flex: 1; overflow: hidden; height: 100%;">
+                    <!-- Sidebar: Stops -->
+                    <div
+                        style="width: 300px; display: flex; flex-direction: column; gap: 0.5rem; padding-right: 0.5rem; overflow: hidden;">
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.8rem; margin-bottom: 0.2rem;">From Date</label>
+                            <input type="date" id="mr-from-date" onchange="window.reloadMilkRunRoute()"
+                                style="padding: 0.3rem; font-size: 0.85rem;">
+                        </div>
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.8rem; margin-bottom: 0.2rem;">To Date</label>
+                            <input type="date" id="mr-to-date" onchange="window.reloadMilkRunRoute()"
+                                style="padding: 0.3rem; font-size: 0.85rem;">
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 0.5rem;">
+                            <label style="font-size: 0.8rem; margin-bottom: 0.2rem;">Select Truck</label>
+                            <select id="routeTruckSelect" onchange="window.loadRouteForTruck(this.value)"
+                                style="padding: 0.4rem; background: var(--glass); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem;">
+                                <option value="">-- Select Truck --</option>
+                            </select>
+                        </div>
+
+                        <div id="routeStopList"
+                            style="display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; flex: 1; border-top: 1px solid var(--border); padding-top: 0.5rem;">
+                            <p class="msg info">Select a truck to view its route.</p>
+                        </div>
+                    </div>
+
+                    <!-- Main Map -->
+                    <div
+                        style="flex: 1; border-radius: 12px; border: 1px solid var(--border); position: relative; overflow: hidden;">
+                        <div id="milkRunMap" style="width: 100%; height: 100%; border-radius: 12px;"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
         <main id="shipments-view" style="display: none;">
             <!-- Create View -->
             <section class="shipment-input" style="display: none;">
@@ -120,71 +166,17 @@
                         <h3 style="margin: 0;">Create New Shipment</h3>
                     </div>
                     <form id="shipment-form">
-                        <!-- Part 1: Cargo Info -->
+                        <!-- Part 1: General Info -->
                         <h4>General Info</h4>
                         <div class="input-grid">
                             <input type="text" id="cargoName" placeholder="Cargo Name" required>
                             <input type="text" id="description" placeholder="Description/Notes">
                         </div>
 
-                        <!-- Part 2: Location -->
-                        <h4 style="margin-top: 1rem; margin-bottom: 0.5rem;">Route & Location</h4>
-                        <div class="sub-card"
-                            style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px; border: 1px dashed var(--border);">
-
-                            <!-- Origin Group -->
-                            <div style="margin-bottom: 1.5rem;">
-                                <label
-                                    style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--success); font-weight: 600;">ORIGIN
-                                    (Start)</label>
-                                <input type="text" id="origin" placeholder="Origin Address" required
-                                    style="margin-bottom: 0.5rem;">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem;">
-                                    <input type="number" id="originLat" placeholder="Latitude" step="any" readonly
-                                        style="background: rgba(0,0,0,0.2);">
-                                    <input type="number" id="originLng" placeholder="Longitude" step="any" readonly
-                                        style="background: rgba(0,0,0,0.2);">
-                                    <button type="button" class="btn-secondary" onclick="window.openMapPicker('origin')"
-                                        style="white-space: nowrap;">📍 Map</button>
-                                </div>
-                            </div>
-
-                            <!-- Destination Group -->
-                            <div>
-                                <label
-                                    style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--danger); font-weight: 600;">DESTINATION
-                                    (End)</label>
-                                <input type="text" id="destination" placeholder="Destination Address" required
-                                    style="margin-bottom: 0.5rem;">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem;">
-                                    <input type="number" id="destLat" placeholder="Latitude" step="any" readonly
-                                        style="background: rgba(0,0,0,0.2);">
-                                    <input type="number" id="destLng" placeholder="Longitude" step="any" readonly
-                                        style="background: rgba(0,0,0,0.2);">
-                                    <button type="button" class="btn-secondary" onclick="window.openMapPicker('dest')"
-                                        style="white-space: nowrap;">📍 Map</button>
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <!-- Part 3: Consignee -->
-                        <h4 style="margin-top: 1rem;">Consignee Details</h4>
-                        <div class="input-grid">
-                            <input type="text" id="consigneeName" placeholder="Consignee Name" required>
-                            <input type="text" id="consigneePhone" placeholder="Phone Number" required>
-                        </div>
-                        <textarea id="consigneeAddress" placeholder="Full Delivery Address"
-                            style="width: 100%; margin-top: 0.5rem; padding: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); border-radius: 8px;"
-                            required></textarea>
-                        <textarea id="deliveryRemark" placeholder="Delivery Remarks"
-                            style="width: 100%; margin-top: 0.5rem; padding: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); border-radius: 8px;"></textarea>
-
-                        <!-- Part 4: Cargo Details Builder -->
+                        <!-- Part 2: Cargo Items (Moved before routes) -->
                         <h4 style="margin-top: 1rem;">Cargo Items</h4>
                         <div class="sub-card"
                             style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px; border: 1px dashed var(--border);">
-                            <h4 style="margin-bottom: 0.5rem; color: var(--text-muted);">Cargo Items</h4>
                             <div class="input-grid"
                                 style="grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                                 <div>
@@ -203,7 +195,6 @@
                                     <input type="number" id="itemQty" placeholder="Qty" value="1" style="width: 100%;">
                                 </div>
                             </div>
-
                             <label
                                 style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Volume
                                 (m³) & Weight (kg)</label>
@@ -214,37 +205,14 @@
                                 <input type="number" id="itemWeight" placeholder="Weight (kg)"
                                     style="text-align: center;">
                             </div>
-
-                            <button type="button" id="addItemBtn" class="add-btn"
-                                style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
-                                <span>+ Add Item</span>
-                            </button>
+                            <button type="button" id="addItemBtn" class="add-btn" style="width: 100%;">+ Add
+                                Item</button>
                         </div>
-
                         <div id="cargoItemsList"
-                            style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                            <!-- Items will be added here -->
-                        </div>
-
-                        <!-- Schedule (New) -->
-                        <div class="sub-card" style="margin-top: 1rem;">
-                            <h4 style="margin-bottom: 0.5rem; color: var(--text-muted);">Schedule</h4>
-                            <div class="input-grid">
-                                <div>
-                                    <label style="font-size: 0.8rem; color: var(--text-muted);">Pick Up Time (at
-                                        Origin)</label>
-                                    <input type="datetime-local" id="pickupTime" style="color-scheme: dark;">
-                                </div>
-                                <div>
-                                    <label style="font-size: 0.8rem; color: var(--text-muted);">Delivery Time (at
-                                        Destination)</label>
-                                    <input type="datetime-local" id="deliveryTime" style="color-scheme: dark;">
-                                </div>
-                            </div>
-                        </div>
+                            style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;"></div>
 
                         <!-- Aggregates (Read Only) -->
-                        <div class="input-grid">
+                        <div class="input-grid" style="margin-top: 0.5rem;">
                             <div>Total Weight (kg)<input type="number" id="totalWeight" readonly
                                     style="background: transparent; border: none; font-weight: bold; color: var(--accent);">
                             </div>
@@ -255,6 +223,56 @@
                                     style="background: transparent; border: none;"></div>
                             <div>Boxes<input type="number" id="totalBoxes" readonly
                                     style="background: transparent; border: none;"></div>
+                        </div>
+
+                        <!-- Part 3: Pickup Location -->
+                        <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Pickup Location</h4>
+                        <div class="sub-card"
+                            style="background: rgba(0,177,64,0.1); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--success);">
+                            <label
+                                style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--success); font-weight: 600;">📦
+                                PICKUP ADDRESS</label>
+                            <input type="text" id="origin" placeholder="Pickup Address" required
+                                style="margin-bottom: 0.5rem;">
+                            <div
+                                style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <input type="number" id="originLat" placeholder="Latitude" step="any" readonly
+                                    style="background: rgba(0,0,0,0.2);">
+                                <input type="number" id="originLng" placeholder="Longitude" step="any" readonly
+                                    style="background: rgba(0,0,0,0.2);">
+                                <button type="button" class="btn-secondary" onclick="window.openMapPicker('origin')"
+                                    style="white-space: nowrap;">📍 Map</button>
+                            </div>
+                            <div
+                                style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <input type="text" id="shipperName" placeholder="Shipper Name">
+                                <input type="text" id="shipperPhone" placeholder="Shipper Phone">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.8rem; color: var(--text-muted);">Pickup Date/Time</label>
+                                <input type="datetime-local" id="pickupTime" style="width: 100%; color-scheme: dark;">
+                            </div>
+                        </div>
+
+                        <!-- Part 4: Delivery Points -->
+                        <h4 style="margin-top: 1rem; margin-bottom: 0.5rem;">Delivery Points</h4>
+                        <div class="sub-card"
+                            style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px; border: 1px dashed var(--border);">
+                            <div id="deliveryPointsList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            </div>
+                            <button type="button" onclick="window.addDeliveryPoint()" class="add-btn"
+                                style="width: 100%; margin-top: 1rem;">+ Add Delivery Point</button>
+                            <div id="quantitySummary"
+                                style="margin-top: 1rem; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px; display: none;">
+                            </div>
+                        </div>
+
+                        <!-- General Remarks -->
+                        <div style="margin-top: 1rem;">
+                            <label style="font-size: 0.8rem; color: var(--text-muted);">Delivery Remarks
+                                (Optional)</label>
+                            <textarea id="deliveryRemark" placeholder="General remarks for this shipment..."
+                                style="width: 100%; margin-top: 0.25rem; padding: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); border-radius: 8px;"></textarea>
                         </div>
 
                         <button type="submit" class="save-btn" style="width: 100%; margin-top: 1rem;">Create
@@ -295,8 +313,10 @@
                 <div class="view-header"
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2>Fleet Overview</h2>
-                    <button onclick="window.toggleTruckView('create')" class="save-btn" style="width: auto;">+ Register
-                        New Truck</button>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button onclick="window.toggleTruckView('create')" class="save-btn" style="width: auto;">+
+                            Register New Truck</button>
+                    </div>
                 </div>
                 <div class="card">
                     <div class="table-container">
@@ -594,23 +614,29 @@
                         <div><strong>Status:</strong> <span id="d-status"></span></div>
                     </div>
 
+                    <!-- Dynamic Shipment Legs Section -->
+                    <div style="margin-top: 1rem;">
+                        <div
+                            style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items: center;">
+                            <h4 style="margin:0;">Shipment Legs</h4>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span style="font-size:0.8rem; opacity:0.7;">Created: <span
+                                        id="d-created"></span></span>
+                                <a id="btn-view-route-gmaps" href="#" target="_blank" class="btn-secondary"
+                                    style="font-size: 0.75rem; padding: 0.3rem 0.6rem; text-decoration: none;">View
+                                    Route in Google Maps ↗</a>
+                            </div>
+                        </div>
 
-                    <div
-                        style="margin-top: 1rem; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
-                        <h4>Consignee</h4>
-                        <p><strong>Name:</strong> <span id="d-c-name"></span></p>
-                        <p><strong>Phone:</strong> <span id="d-c-phone"></span></p>
-                        <p><strong>Address:</strong> <span id="d-c-address"></span></p>
-                        <p><strong>Remark:</strong> <span id="d-c-remark"></span></p>
+                        <!-- Legs will be dynamically rendered here -->
+                        <div id="d-legs-container" style="display: flex; flex-direction: column; gap: 1rem;"></div>
                     </div>
 
                     <!-- Proof of Delivery Section -->
                     <div id="d-pod-section"
                         style="margin-top: 1rem; background: rgba(0, 177, 64, 0.1); padding: 1rem; border-radius: 8px; display: none;">
                         <h4 style="margin-bottom: 0.5rem; color: var(--success);">Proof of Delivery</h4>
-
                         <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <!-- Signature -->
                             <div id="d-pod-sig-container" style="display: none;">
                                 <label
                                     style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Receiver
@@ -621,8 +647,6 @@
                                         style="max-width: 100%; max-height: 150px; display: block;" alt="Signature">
                                 </div>
                             </div>
-
-                            <!-- Photo -->
                             <div id="d-pod-img-container" style="display: none;">
                                 <label
                                     style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Delivery
@@ -630,72 +654,6 @@
                                 <img id="d-pod-image"
                                     style="max-width: 100%; border-radius: 4px; border: 1px solid var(--border);"
                                     alt="Proof of Delivery">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Trip Schedule & Locations -->
-                    <div
-                        style="margin-top: 1rem; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
-                        <div
-                            style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items: center;">
-                            <h4 style="margin:0;">Trip Details</h4>
-                            <div style="font-size:0.8rem; opacity:0.7;">Created: <span id="d-created"></span></div>
-                        </div>
-
-                        <div class="input-grid" style="gap: 2rem;">
-                            <!-- Origin / Pick Up -->
-                            <div>
-                                <div
-                                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; padding-bottom:0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <strong style="color:var(--success); font-size:1rem;">PICK UP</strong>
-                                    <a id="d-origin-map" href="#" target="_blank"
-                                        style="color:var(--accent); font-size:0.8rem; text-decoration:none;">View Map
-                                        ↗</a>
-                                </div>
-
-                                <div style="margin-bottom:0.8rem;">
-                                    <span
-                                        style="display:block; opacity:0.6; font-size:0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Time</span>
-                                    <strong id="d-pickup" style="font-size:1.05rem;"></strong>
-                                </div>
-
-                                <div style="margin-bottom:0.5rem;">
-                                    <span
-                                        style="display:block; opacity:0.6; font-size:0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Location</span>
-                                    <div id="d-origin-addr" style="font-size: 0.95rem;"></div>
-                                </div>
-
-                                <div style="font-size: 0.8rem; font-family: monospace; opacity: 0.5;">
-                                    <span id="d-origin-lat"></span>, <span id="d-origin-lng"></span>
-                                </div>
-                            </div>
-
-                            <!-- Destination / Delivery -->
-                            <div>
-                                <div
-                                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; padding-bottom:0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <strong style="color:var(--danger); font-size:1rem;">DELIVERY</strong>
-                                    <a id="d-dest-map" href="#" target="_blank"
-                                        style="color:var(--accent); font-size:0.8rem; text-decoration:none;">View Map
-                                        ↗</a>
-                                </div>
-
-                                <div style="margin-bottom:0.8rem;">
-                                    <span
-                                        style="display:block; opacity:0.6; font-size:0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Time</span>
-                                    <strong id="d-delivery" style="font-size:1.05rem;"></strong>
-                                </div>
-
-                                <div style="margin-bottom:0.5rem;">
-                                    <span
-                                        style="display:block; opacity:0.6; font-size:0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Location</span>
-                                    <div id="d-dest-addr" style="font-size: 0.95rem;"></div>
-                                </div>
-
-                                <div style="font-size: 0.8rem; font-family: monospace; opacity: 0.5;">
-                                    <span id="d-dest-lat"></span>, <span id="d-dest-lng"></span>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -760,6 +718,7 @@
             </div>
         </div>
     </div>
+
 
     <script src="app.js"></script>
 </body>
