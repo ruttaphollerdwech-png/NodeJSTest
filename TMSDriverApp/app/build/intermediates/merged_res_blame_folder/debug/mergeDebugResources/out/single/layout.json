@@ -1,22 +1,26 @@
 [
     {
-        "merged": "com.tms.driver.app-mergeDebugResources-53:/layout/activity_login.xml",
-        "source": "com.tms.driver.app-main-56:/layout/activity_login.xml"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-mergeDebugResources-53:\\layout\\activity_shipment_details.xml",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\layout\\activity_shipment_details.xml"
+    },
+    {
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-mergeDebugResources-53:\\layout\\activity_login.xml",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\layout\\activity_login.xml"
     },
     {
         "merged": "com.tms.driver.app-mergeDebugResources-53:/layout/activity_shipment_details.xml",
         "source": "com.tms.driver.app-main-56:/layout/activity_shipment_details.xml"
     },
     {
-        "merged": "com.tms.driver.app-mergeDebugResources-53:/layout/activity_pod.xml",
-        "source": "com.tms.driver.app-main-56:/layout/activity_pod.xml"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-mergeDebugResources-53:\\layout\\activity_pod.xml",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\layout\\activity_pod.xml"
     },
     {
-        "merged": "com.tms.driver.app-mergeDebugResources-53:/layout/item_shipment.xml",
-        "source": "com.tms.driver.app-main-56:/layout/item_shipment.xml"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-mergeDebugResources-53:\\layout\\item_shipment.xml",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\layout\\item_shipment.xml"
     },
     {
-        "merged": "com.tms.driver.app-mergeDebugResources-53:/layout/activity_shipments.xml",
-        "source": "com.tms.driver.app-main-56:/layout/activity_shipments.xml"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-mergeDebugResources-53:\\layout\\activity_shipments.xml",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\layout\\activity_shipments.xml"
     }
 ]

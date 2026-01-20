@@ -19,6 +19,7 @@ color text_primary
 color text_secondary
 color warning
 color white
+drawable bg_cargo_info
 drawable bg_circle_danger
 drawable bg_circle_success
 drawable bg_status_badge
@@ -50,6 +51,7 @@ id iconDest
 id iconOrigin
 id ivLogo
 id ivPhoto
+id legsContainer
 id progressBar
 id routeLine
 id rvShipments
@@ -58,7 +60,12 @@ id swipeRefresh
 id tilPassword
 id tilUsername
 id toolbar
+id tvCargoBoxes
 id tvCargoName
+id tvCargoPallets
+id tvCargoQuantity
+id tvCargoVolume
+id tvCargoWeight
 id tvConsigneeName
 id tvConsigneePhone
 id tvDestination

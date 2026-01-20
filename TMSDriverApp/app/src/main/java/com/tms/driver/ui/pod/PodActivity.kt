@@ -52,17 +52,24 @@ class PodActivity : AppCompatActivity() {
     private val cameraLauncher = registerForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
+        android.util.Log.d("PodActivity", "Camera result: success=$success, file exists=${photoFile?.exists()}")
         if (success && photoFile?.exists() == true) {
             // Load and display the photo
             photoBitmap = android.graphics.BitmapFactory.decodeFile(photoFile?.absolutePath)
             binding.ivPhoto.setImageBitmap(photoBitmap)
             binding.ivPhoto.visibility = View.VISIBLE
             binding.btnTakePhoto.text = "Retake Photo"
+            Toast.makeText(this, "Photo saved. Please sign and submit.", Toast.LENGTH_SHORT).show()
+        } else if (!success) {
+            android.util.Log.d("PodActivity", "Camera was cancelled")
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Ensure ApiClient is initialized
+        ApiClient.init(applicationContext)
         
         binding = ActivityPodBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -163,12 +170,15 @@ class PodActivity : AppCompatActivity() {
                         Toast.makeText(this@PodActivity, 
                             getString(R.string.success_pod_submitted), Toast.LENGTH_SHORT).show()
                         
-                        // Return to shipments list
-                        setResult(RESULT_OK)
+                        // Navigate back to shipments list (skip details screen)
+                        val intent = Intent(this@PodActivity, com.tms.driver.ui.shipments.ShipmentsActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                        startActivity(intent)
                         finish()
                     } else {
+                        val errorBody = response.errorBody()?.string() ?: "Unknown error"
                         Toast.makeText(this@PodActivity, 
-                            "Failed to submit POD", Toast.LENGTH_SHORT).show()
+                            "Failed to submit POD: $errorBody", Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {

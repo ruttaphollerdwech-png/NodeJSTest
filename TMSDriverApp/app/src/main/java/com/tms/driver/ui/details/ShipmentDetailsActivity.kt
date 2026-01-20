@@ -33,6 +33,9 @@ class ShipmentDetailsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Ensure ApiClient is initialized
+        ApiClient.init(applicationContext)
+        
         binding = ActivityShipmentDetailsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -52,8 +55,19 @@ class ShipmentDetailsActivity : AppCompatActivity() {
             tvCargoName.text = intent.getStringExtra("cargo_name") ?: "—"
             tvStatus.text = currentStatus
             tvOrigin.text = intent.getStringExtra("origin") ?: "N/A"
-            tvDestination.text = intent.getStringExtra("destination") ?: "N/A"
-            tvWeight.text = "${intent.getDoubleExtra("weight", 0.0).toInt()} kg"
+            
+            // Cargo details
+            val weight = intent.getDoubleExtra("weight", 0.0)
+            val pallets = intent.getIntExtra("pallet_qty", 0)
+            val boxes = intent.getIntExtra("box_qty", 0)
+            val volume = intent.getDoubleExtra("total_volume", 0.0)
+            
+            tvWeight.text = "${weight.toInt()} kg"
+            tvCargoWeight.text = "${weight.toInt()} kg"
+            tvCargoPallets.text = pallets.toString()
+            tvCargoBoxes.text = boxes.toString()
+            tvCargoVolume.text = "${String.format("%.2f", volume)} m³"
+            
             tvConsigneeName.text = intent.getStringExtra("consignee_name") ?: "—"
             tvConsigneePhone.text = intent.getStringExtra("consignee_phone") ?: "—"
 
@@ -101,6 +115,192 @@ class ShipmentDetailsActivity : AppCompatActivity() {
                 startActivity(intent)
             }
         }
+
+        // Load legs from API
+        loadLegs()
+    }
+
+    private fun loadLegs() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = ApiClient.getService().getShipmentLegs(shipmentId)
+                if (response.isSuccessful) {
+                    val legs = response.body() ?: emptyList()
+                    withContext(Dispatchers.Main) {
+                        renderLegs(legs)
+                    }
+                }
+            } catch (e: Exception) {
+                // Fallback to single delivery if API fails
+                withContext(Dispatchers.Main) {
+                    renderFallbackDelivery()
+                }
+            }
+        }
+    }
+
+    private fun renderLegs(legs: List<com.tms.driver.data.model.ShipmentLeg>) {
+        binding.legsContainer.removeAllViews()
+
+        val deliveryLegs = legs.filter { it.legType == "delivery" }
+
+        if (deliveryLegs.isEmpty()) {
+            renderFallbackDelivery()
+            return
+        }
+
+        deliveryLegs.forEachIndexed { index, leg ->
+            val legView = layoutInflater.inflate(android.R.layout.simple_list_item_2, binding.legsContainer, false)
+
+            // Create custom leg view
+            val legLayout = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = (12 * resources.displayMetrics.density).toInt()
+                }
+            }
+
+            // Red circle indicator
+            val indicator = android.view.View(this).apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    (12 * resources.displayMetrics.density).toInt(),
+                    (12 * resources.displayMetrics.density).toInt()
+                ).apply {
+                    topMargin = (4 * resources.displayMetrics.density).toInt()
+                }
+                setBackgroundResource(R.drawable.bg_circle_danger)
+            }
+
+            // Text container
+            val textContainer = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    0,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                ).apply {
+                    marginStart = (12 * resources.displayMetrics.density).toInt()
+                }
+            }
+
+            // Title with delivery number
+            val title = android.widget.TextView(this).apply {
+                text = "DELIVERY ${index + 1}"
+                setTextColor(getColor(R.color.danger))
+                textSize = 12f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+            }
+
+            // Location
+            val location = android.widget.TextView(this).apply {
+                text = leg.locationName
+                setTextColor(getColor(R.color.text_primary))
+                textSize = 14f
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = (2 * resources.displayMetrics.density).toInt()
+                }
+            }
+
+            // Quantity/Cargo info
+            val quantityInfo = android.widget.TextView(this).apply {
+                val qty = leg.quantity ?: ""
+                val cargo = leg.cargoName ?: ""
+                text = if (qty.isNotEmpty() || cargo.isNotEmpty()) {
+                    "📦 ${cargo.ifEmpty { "Cargo" }} ${if (qty.isNotEmpty()) "• $qty" else ""}"
+                } else {
+                    ""
+                }
+                setTextColor(getColor(R.color.text_muted))
+                textSize = 12f
+                visibility = if (text.isNotEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = (4 * resources.displayMetrics.density).toInt()
+                }
+            }
+
+            // Consignee
+            val consignee = android.widget.TextView(this).apply {
+                val name = leg.consigneeName ?: ""
+                text = if (name.isNotEmpty()) "👤 $name" else ""
+                setTextColor(getColor(R.color.text_muted))
+                textSize = 11f
+                visibility = if (text.isNotEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+            }
+
+            textContainer.addView(title)
+            textContainer.addView(location)
+            textContainer.addView(quantityInfo)
+            textContainer.addView(consignee)
+
+            legLayout.addView(indicator)
+            legLayout.addView(textContainer)
+
+            binding.legsContainer.addView(legLayout)
+        }
+    }
+
+    private fun renderFallbackDelivery() {
+        val destination = intent.getStringExtra("destination") ?: "N/A"
+
+        val legLayout = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = (12 * resources.displayMetrics.density).toInt()
+            }
+        }
+
+        val indicator = android.view.View(this).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                (12 * resources.displayMetrics.density).toInt(),
+                (12 * resources.displayMetrics.density).toInt()
+            ).apply {
+                topMargin = (4 * resources.displayMetrics.density).toInt()
+            }
+            setBackgroundResource(R.drawable.bg_circle_danger)
+        }
+
+        val textContainer = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                0,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply {
+                marginStart = (12 * resources.displayMetrics.density).toInt()
+            }
+        }
+
+        val title = android.widget.TextView(this).apply {
+            text = "DELIVERY"
+            setTextColor(getColor(R.color.danger))
+            textSize = 12f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        }
+
+        val location = android.widget.TextView(this).apply {
+            text = destination
+            setTextColor(getColor(R.color.text_primary))
+            textSize = 14f
+        }
+
+        textContainer.addView(title)
+        textContainer.addView(location)
+        legLayout.addView(indicator)
+        legLayout.addView(textContainer)
+
+        binding.legsContainer.addView(legLayout)
     }
 
     private fun updateActionButtons() {

@@ -1677,6 +1677,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <strong style="color:${color}; font-size:0.95rem;">${icon} ${title}</strong>
                         ${hasCoords ? `<a href="${mapLink}" target="_blank" style="color:var(--accent); font-size:0.75rem; text-decoration:none;">View Map ↗</a>` : ''}
                     </div>
+                    ${leg.cargo_name || leg.quantity ? `
+                    <div style="background: rgba(0,177,64,0.1); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem;">
+                        <span style="opacity:0.6; font-size:0.75rem;">📦 Cargo</span>
+                        <div style="font-weight: 500;">${leg.cargo_name || d.cargo_name || '-'}</div>
+                        ${leg.quantity ? `<div style="font-size: 0.85rem; opacity: 0.8;">Qty: ${leg.quantity}</div>` : ''}
+                    </div>
+                    ` : ''}
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
                         <div>
                             <span style="opacity:0.6; font-size:0.75rem;">Location</span>
@@ -1695,6 +1702,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div>${phone}</div>
                         </div>
                     </div>
+                    ${leg.notes ? `<div style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.7;"><i>Note: ${leg.notes}</i></div>` : ''}
                     ${hasCoords ? `<div style="font-size: 0.75rem; font-family: monospace; opacity: 0.5; margin-top: 0.5rem;">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>` : ''}
                 </div>
             `;

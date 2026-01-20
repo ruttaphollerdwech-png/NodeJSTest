@@ -1,25 +1,25 @@
 <resources>
-    <!-- App Colors - Matching Web TMS -->
-    <color name="primary">#002664</color>
-    <color name="primary_dark">#001a44</color>
-    <color name="accent">#00b140</color>
-    <color name="background">#0a0f1c</color>
-    <color name="surface">#141b2d</color>
-    <color name="card_background">#1a2235</color>
+    <!-- App Colors - Light Blue & Lime Green Theme -->
+    <color name="primary">#03A9F4</color>
+    <color name="primary_dark">#0288D1</color>
+    <color name="accent">#CDDC39</color>
+    <color name="background">#E3F2FD</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="card_background">#FFFFFF</color>
     
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#B0B0B0</color>
-    <color name="text_muted">#707070</color>
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#616161</color>
+    <color name="text_muted">#9E9E9E</color>
     
-    <color name="success">#00b140</color>
-    <color name="warning">#f39c12</color>
-    <color name="danger">#e74c3c</color>
-    <color name="info">#3498db</color>
+    <color name="success">#8BC34A</color>
+    <color name="warning">#FFC107</color>
+    <color name="danger">#F44336</color>
+    <color name="info">#03A9F4</color>
     
-    <color name="status_pending">#808080</color>
-    <color name="status_assigned">#002664</color>
-    <color name="status_in_transit">#3498db</color>
-    <color name="status_delivered">#00b140</color>
+    <color name="status_pending">#9E9E9E</color>
+    <color name="status_assigned">#03A9F4</color>
+    <color name="status_in_transit">#29B6F6</color>
+    <color name="status_delivered">#8BC34A</color>
     
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>

@@ -234,6 +234,10 @@ const initDB = async () => {
                 IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipment_legs' AND COLUMN_NAME='quantity' AND DATA_TYPE='integer') THEN
                     ALTER TABLE shipment_legs ALTER COLUMN quantity TYPE TEXT USING quantity::TEXT;
                 END IF;
+                -- Add cargo_name column for cargo details per leg
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='shipment_legs' AND COLUMN_NAME='cargo_name') THEN
+                    ALTER TABLE shipment_legs ADD COLUMN cargo_name VARCHAR(200);
+                END IF;
             END $$;
         `);
 

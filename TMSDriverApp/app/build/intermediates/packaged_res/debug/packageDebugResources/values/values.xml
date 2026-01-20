@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="accent">#00b140</color>
-    <color name="background">#0a0f1c</color>
+    <color name="accent">#CDDC39</color>
+    <color name="background">#E3F2FD</color>
     <color name="black">#000000</color>
-    <color name="card_background">#1a2235</color>
-    <color name="danger">#e74c3c</color>
-    <color name="info">#3498db</color>
-    <color name="primary">#002664</color>
-    <color name="primary_dark">#001a44</color>
-    <color name="status_assigned">#002664</color>
-    <color name="status_delivered">#00b140</color>
-    <color name="status_in_transit">#3498db</color>
-    <color name="status_pending">#808080</color>
-    <color name="success">#00b140</color>
-    <color name="surface">#141b2d</color>
-    <color name="text_muted">#707070</color>
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#B0B0B0</color>
-    <color name="warning">#f39c12</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="danger">#F44336</color>
+    <color name="info">#03A9F4</color>
+    <color name="primary">#03A9F4</color>
+    <color name="primary_dark">#0288D1</color>
+    <color name="status_assigned">#03A9F4</color>
+    <color name="status_delivered">#8BC34A</color>
+    <color name="status_in_transit">#29B6F6</color>
+    <color name="status_pending">#9E9E9E</color>
+    <color name="success">#8BC34A</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text_muted">#9E9E9E</color>
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#616161</color>
+    <color name="warning">#FFC107</color>
     <color name="white">#FFFFFF</color>
     <string name="app_name">TMS Driver</string>
     <string name="btn_capture_pod">Capture POD</string>
@@ -50,13 +50,13 @@
     <string name="take_photo">Take Photo</string>
     <style name="PrimaryButton" parent="Widget.MaterialComponents.Button">
         <item name="android:backgroundTint">@color/accent</item>
-        <item name="android:textColor">@color/white</item>
+        <item name="android:textColor">@color/black</item>
         <item name="android:textAllCaps">false</item>
         <item name="cornerRadius">8dp</item>
     </style>
     <style name="SecondaryButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
-        <item name="strokeColor">@color/accent</item>
-        <item name="android:textColor">@color/accent</item>
+        <item name="strokeColor">@color/primary</item>
+        <item name="android:textColor">@color/primary</item>
         <item name="android:textAllCaps">false</item>
         <item name="cornerRadius">8dp</item>
     </style>
@@ -78,12 +78,13 @@
         <item name="android:textSize">18sp</item>
         <item name="android:textStyle">bold</item>
     </style>
-    <style name="Theme.TMSDriver" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.TMSDriver" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="colorAccent">@color/accent</item>
         <item name="android:windowBackground">@color/background</item>
         <item name="android:statusBarColor">@color/primary_dark</item>
-        <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:navigationBarColor">@color/primary</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

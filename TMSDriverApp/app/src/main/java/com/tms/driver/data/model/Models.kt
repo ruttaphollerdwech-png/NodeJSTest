@@ -72,6 +72,7 @@ data class ShipmentLeg(
     @SerializedName("shipper_name") val shipperName: String?,
     @SerializedName("shipper_phone") val shipperPhone: String?,
     @SerializedName("scheduled_time") val scheduledTime: String?,
+    @SerializedName("cargo_name") val cargoName: String?,
     val quantity: String?,
     val status: String?,
     val notes: String?

@@ -4,6 +4,7 @@ package com.tms.driver.databinding;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -32,22 +33,37 @@ public final class ActivityShipmentDetailsBinding implements ViewBinding {
   public final MaterialButton btnStartTransit;
 
   @NonNull
+  public final LinearLayout legsContainer;
+
+  @NonNull
   public final ProgressBar progressBar;
 
   @NonNull
   public final Toolbar toolbar;
 
   @NonNull
+  public final TextView tvCargoBoxes;
+
+  @NonNull
   public final TextView tvCargoName;
+
+  @NonNull
+  public final TextView tvCargoPallets;
+
+  @NonNull
+  public final TextView tvCargoQuantity;
+
+  @NonNull
+  public final TextView tvCargoVolume;
+
+  @NonNull
+  public final TextView tvCargoWeight;
 
   @NonNull
   public final TextView tvConsigneeName;
 
   @NonNull
   public final TextView tvConsigneePhone;
-
-  @NonNull
-  public final TextView tvDestination;
 
   @NonNull
   public final TextView tvOrigin;
@@ -63,21 +79,28 @@ public final class ActivityShipmentDetailsBinding implements ViewBinding {
 
   private ActivityShipmentDetailsBinding(@NonNull CoordinatorLayout rootView,
       @NonNull MaterialButton btnComplete, @NonNull MaterialButton btnNavigate,
-      @NonNull MaterialButton btnStartTransit, @NonNull ProgressBar progressBar,
-      @NonNull Toolbar toolbar, @NonNull TextView tvCargoName, @NonNull TextView tvConsigneeName,
-      @NonNull TextView tvConsigneePhone, @NonNull TextView tvDestination,
-      @NonNull TextView tvOrigin, @NonNull TextView tvShipmentId, @NonNull TextView tvStatus,
-      @NonNull TextView tvWeight) {
+      @NonNull MaterialButton btnStartTransit, @NonNull LinearLayout legsContainer,
+      @NonNull ProgressBar progressBar, @NonNull Toolbar toolbar, @NonNull TextView tvCargoBoxes,
+      @NonNull TextView tvCargoName, @NonNull TextView tvCargoPallets,
+      @NonNull TextView tvCargoQuantity, @NonNull TextView tvCargoVolume,
+      @NonNull TextView tvCargoWeight, @NonNull TextView tvConsigneeName,
+      @NonNull TextView tvConsigneePhone, @NonNull TextView tvOrigin,
+      @NonNull TextView tvShipmentId, @NonNull TextView tvStatus, @NonNull TextView tvWeight) {
     this.rootView = rootView;
     this.btnComplete = btnComplete;
     this.btnNavigate = btnNavigate;
     this.btnStartTransit = btnStartTransit;
+    this.legsContainer = legsContainer;
     this.progressBar = progressBar;
     this.toolbar = toolbar;
+    this.tvCargoBoxes = tvCargoBoxes;
     this.tvCargoName = tvCargoName;
+    this.tvCargoPallets = tvCargoPallets;
+    this.tvCargoQuantity = tvCargoQuantity;
+    this.tvCargoVolume = tvCargoVolume;
+    this.tvCargoWeight = tvCargoWeight;
     this.tvConsigneeName = tvConsigneeName;
     this.tvConsigneePhone = tvConsigneePhone;
-    this.tvDestination = tvDestination;
     this.tvOrigin = tvOrigin;
     this.tvShipmentId = tvShipmentId;
     this.tvStatus = tvStatus;
@@ -129,6 +152,12 @@ public final class ActivityShipmentDetailsBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.legsContainer;
+      LinearLayout legsContainer = ViewBindings.findChildViewById(rootView, id);
+      if (legsContainer == null) {
+        break missingId;
+      }
+
       id = R.id.progressBar;
       ProgressBar progressBar = ViewBindings.findChildViewById(rootView, id);
       if (progressBar == null) {
@@ -141,9 +170,39 @@ public final class ActivityShipmentDetailsBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.tvCargoBoxes;
+      TextView tvCargoBoxes = ViewBindings.findChildViewById(rootView, id);
+      if (tvCargoBoxes == null) {
+        break missingId;
+      }
+
       id = R.id.tvCargoName;
       TextView tvCargoName = ViewBindings.findChildViewById(rootView, id);
       if (tvCargoName == null) {
+        break missingId;
+      }
+
+      id = R.id.tvCargoPallets;
+      TextView tvCargoPallets = ViewBindings.findChildViewById(rootView, id);
+      if (tvCargoPallets == null) {
+        break missingId;
+      }
+
+      id = R.id.tvCargoQuantity;
+      TextView tvCargoQuantity = ViewBindings.findChildViewById(rootView, id);
+      if (tvCargoQuantity == null) {
+        break missingId;
+      }
+
+      id = R.id.tvCargoVolume;
+      TextView tvCargoVolume = ViewBindings.findChildViewById(rootView, id);
+      if (tvCargoVolume == null) {
+        break missingId;
+      }
+
+      id = R.id.tvCargoWeight;
+      TextView tvCargoWeight = ViewBindings.findChildViewById(rootView, id);
+      if (tvCargoWeight == null) {
         break missingId;
       }
 
@@ -156,12 +215,6 @@ public final class ActivityShipmentDetailsBinding implements ViewBinding {
       id = R.id.tvConsigneePhone;
       TextView tvConsigneePhone = ViewBindings.findChildViewById(rootView, id);
       if (tvConsigneePhone == null) {
-        break missingId;
-      }
-
-      id = R.id.tvDestination;
-      TextView tvDestination = ViewBindings.findChildViewById(rootView, id);
-      if (tvDestination == null) {
         break missingId;
       }
 
@@ -190,8 +243,9 @@ public final class ActivityShipmentDetailsBinding implements ViewBinding {
       }
 
       return new ActivityShipmentDetailsBinding((CoordinatorLayout) rootView, btnComplete,
-          btnNavigate, btnStartTransit, progressBar, toolbar, tvCargoName, tvConsigneeName,
-          tvConsigneePhone, tvDestination, tvOrigin, tvShipmentId, tvStatus, tvWeight);
+          btnNavigate, btnStartTransit, legsContainer, progressBar, toolbar, tvCargoBoxes,
+          tvCargoName, tvCargoPallets, tvCargoQuantity, tvCargoVolume, tvCargoWeight,
+          tvConsigneeName, tvConsigneePhone, tvOrigin, tvShipmentId, tvStatus, tvWeight);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

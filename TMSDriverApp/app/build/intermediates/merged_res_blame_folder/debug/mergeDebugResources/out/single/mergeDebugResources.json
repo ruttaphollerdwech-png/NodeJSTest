@@ -4,28 +4,36 @@
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\drawable\\ic_logout.xml"
     },
     {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-mdpi_ic_launcher.webp.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-mdpi/ic_launcher.webp"
-    },
-    {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\drawable_bg_circle_success.xml.flat",
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\drawable\\bg_circle_success.xml"
     },
     {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-hdpi_ic_launcher_round.webp.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-hdpi/ic_launcher_round.webp"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-xhdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-xhdpi\\ic_launcher.webp"
     },
     {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\layout_activity_shipments.xml.flat",
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\layout\\activity_shipments.xml"
     },
     {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-mdpi_ic_launcher_round.webp.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-mdpi/ic_launcher_round.webp"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\drawable_ic_launcher_background.xml.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\drawable\\ic_launcher_background.xml"
+    },
+    {
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-mdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-mdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-xxhdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-xxhdpi\\ic_launcher.webp"
     },
     {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\layout_activity_shipment_details.xml.flat",
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\layout\\activity_shipment_details.xml"
+    },
+    {
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-xxhdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-xxhdpi\\ic_launcher_round.webp"
     },
     {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\drawable_bg_circle_danger.xml.flat",
@@ -40,72 +48,72 @@
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\layout\\item_shipment.xml"
     },
     {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-xxxhdpi_ic_launcher_round.webp.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-xxxhdpi/ic_launcher_round.webp"
-    },
-    {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\layout_activity_login.xml.flat",
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\layout\\activity_login.xml"
+    },
+    {
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
     },
     {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\layout_activity_pod.xml.flat",
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\layout\\activity_pod.xml"
     },
     {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-anydpi-v26/ic_launcher_round.xml"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-anydpi-v26\\ic_launcher.xml"
     },
     {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-xxxhdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-xxxhdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-xhdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-xhdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-mdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-mdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\drawable_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\drawable\\ic_launcher_foreground.xml"
     },
     {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\drawable_ic_back.xml.flat",
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\drawable\\ic_back.xml"
     },
     {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-xxhdpi_ic_launcher.webp.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-xxhdpi/ic_launcher.webp"
-    },
-    {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-xhdpi_ic_launcher_round.webp.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-xhdpi/ic_launcher_round.webp"
-    },
-    {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-xhdpi_ic_launcher.webp.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-xhdpi/ic_launcher.webp"
-    },
-    {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\drawable_ic_camera.xml.flat",
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\drawable\\ic_camera.xml"
+    },
+    {
+        "merged": "com.tms.driver.app-debug-54:/layout_activity_shipment_details.xml.flat",
+        "source": "com.tms.driver.app-main-56:/layout/activity_shipment_details.xml"
     },
     {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\drawable_bg_status_badge.xml.flat",
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\drawable\\bg_status_badge.xml"
     },
     {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-hdpi_ic_launcher.webp.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-hdpi/ic_launcher.webp"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-hdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-hdpi\\ic_launcher_round.webp"
     },
     {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-xxxhdpi_ic_launcher.webp.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-xxxhdpi/ic_launcher.webp"
-    },
-    {
-        "merged": "com.tms.driver.app-debug-54:/mipmap-xxhdpi_ic_launcher_round.webp.flat",
-        "source": "com.tms.driver.app-main-56:/mipmap-xxhdpi/ic_launcher_round.webp"
-    },
-    {
-        "merged": "com.tms.driver.app-debug-54:/drawable_ic_launcher_background.xml.flat",
-        "source": "com.tms.driver.app-main-56:/drawable/ic_launcher_background.xml"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\drawable_bg_cargo_info.xml.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\drawable\\bg_cargo_info.xml"
     },
     {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\xml_file_paths.xml.flat",
         "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\xml\\file_paths.xml"
     },
     {
-        "merged": "com.tms.driver.app-debug-54:/drawable_ic_launcher_foreground.xml.flat",
-        "source": "com.tms.driver.app-main-56:/drawable/ic_launcher_foreground.xml"
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-hdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-hdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\mipmap-xxxhdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-main-56:\\mipmap-xxxhdpi\\ic_launcher.webp"
     },
     {
         "merged": "C:\\Users\\ruttaphol.lerdwech\\.gradle\\daemon\\9.0-milestone-1\\com.tms.driver.app-debug-54:\\drawable_ic_truck.xml.flat",

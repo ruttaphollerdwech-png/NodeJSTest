@@ -30,6 +30,9 @@ class ShipmentsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Ensure ApiClient is initialized
+        ApiClient.init(applicationContext)
+        
         binding = ActivityShipmentsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -80,6 +83,10 @@ class ShipmentsActivity : AppCompatActivity() {
             intent.putExtra("weight", shipment.weight ?: 0.0)
             intent.putExtra("consignee_name", shipment.consigneeName)
             intent.putExtra("consignee_phone", shipment.consigneePhone)
+            // Cargo details
+            intent.putExtra("pallet_qty", shipment.palletQty ?: 0)
+            intent.putExtra("box_qty", shipment.boxQty ?: 0)
+            intent.putExtra("total_volume", shipment.totalVolume ?: 0.0)
             startActivity(intent)
         }
         binding.rvShipments.adapter = adapter
