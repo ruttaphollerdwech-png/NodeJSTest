@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="@color/card_background"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Status Badge -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_status_badge"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp"
+            android:text="Assigned"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Shipment ID -->
+        <TextView
+            android:id="@+id/tvShipmentId"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="#00001"
+            android:textColor="@color/accent"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Cargo Name -->
+        <TextView
+            android:id="@+id/tvCargoName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="Cargo Name"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintTop_toBottomOf="@id/tvShipmentId"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tvStatus" />
+
+        <!-- Divider -->
+        <View
+            android:id="@+id/divider"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:background="@color/text_muted"
+            android:alpha="0.2"
+            app:layout_constraintTop_toBottomOf="@id/tvCargoName"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Origin Icon -->
+        <View
+            android:id="@+id/iconOrigin"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_circle_success"
+            app:layout_constraintTop_toBottomOf="@id/divider"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Origin Text -->
+        <TextView
+            android:id="@+id/tvOrigin"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Origin location"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintTop_toTopOf="@id/iconOrigin"
+            app:layout_constraintBottom_toBottomOf="@id/iconOrigin"
+            app:layout_constraintStart_toEndOf="@id/iconOrigin"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Route line -->
+        <View
+            android:id="@+id/routeLine"
+            android:layout_width="2dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="5dp"
+            android:background="@color/text_muted"
+            app:layout_constraintTop_toBottomOf="@id/iconOrigin"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Destination Icon -->
+        <View
+            android:id="@+id/iconDest"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@drawable/bg_circle_danger"
+            app:layout_constraintTop_toBottomOf="@id/routeLine"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Destination Text -->
+        <TextView
+            android:id="@+id/tvDestination"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Destination location"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintTop_toTopOf="@id/iconDest"
+            app:layout_constraintBottom_toBottomOf="@id/iconDest"
+            app:layout_constraintStart_toEndOf="@id/iconDest"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Weight/Volume Info -->
+        <TextView
+            android:id="@+id/tvInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="1000 kg • 2 pallets"
+            android:textColor="@color/text_muted"
+            android:textSize="12sp"
+            android:drawablePadding="4dp"
+            app:layout_constraintTop_toBottomOf="@id/iconDest"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Time -->
+        <TextView
+            android:id="@+id/tvTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="10:30 AM"
+            android:textColor="@color/text_muted"
+            android:textSize="12sp"
+            app:layout_constraintTop_toTopOf="@id/tvInfo"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="accent">#00b140</color>
+    <color name="background">#0a0f1c</color>
+    <color name="black">#000000</color>
+    <color name="card_background">#1a2235</color>
+    <color name="danger">#e74c3c</color>
+    <color name="info">#3498db</color>
+    <color name="primary">#002664</color>
+    <color name="primary_dark">#001a44</color>
+    <color name="status_assigned">#002664</color>
+    <color name="status_delivered">#00b140</color>
+    <color name="status_in_transit">#3498db</color>
+    <color name="status_pending">#808080</color>
+    <color name="success">#00b140</color>
+    <color name="surface">#141b2d</color>
+    <color name="text_muted">#707070</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0B0B0</color>
+    <color name="warning">#f39c12</color>
+    <color name="white">#FFFFFF</color>
+    <string name="app_name">TMS Driver</string>
+    <string name="btn_capture_pod">Capture POD</string>
+    <string name="btn_clear">Clear</string>
+    <string name="btn_complete_delivery">Complete Delivery</string>
+    <string name="btn_login">Login</string>
+    <string name="btn_logout">Logout</string>
+    <string name="btn_navigate">Navigate</string>
+    <string name="btn_start_transit">Start Transit</string>
+    <string name="btn_submit">Submit</string>
+    <string name="error_login_failed">Login failed. Please check your credentials.</string>
+    <string name="error_network">Network error. Please try again.</string>
+    <string name="filter_all">All</string>
+    <string name="filter_assigned">Assigned</string>
+    <string name="filter_in_transit">In Transit</string>
+    <string name="hint_password">Password</string>
+    <string name="hint_username">Username</string>
+    <string name="loading">Loading...</string>
+    <string name="login_title">Driver Login</string>
+    <string name="no_shipments">No shipments assigned</string>
+    <string name="pod_title">Proof of Delivery</string>
+    <string name="shipments_title">My Shipments</string>
+    <string name="signature_hint">Please sign below</string>
+    <string name="status_assigned">Assigned</string>
+    <string name="status_delivered">Delivered</string>
+    <string name="status_in_transit">In Transit</string>
+    <string name="status_pending">Pending</string>
+    <string name="success_pod_submitted">POD submitted successfully</string>
+    <string name="success_status_updated">Status updated successfully</string>
+    <string name="take_photo">Take Photo</string>
+    <style name="PrimaryButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:backgroundTint">@color/accent</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+    <style name="SecondaryButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="strokeColor">@color/accent</item>
+        <item name="android:textColor">@color/accent</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+    <style name="ShipmentCard" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">@color/card_background</item>
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">4dp</item>
+    </style>
+    <style name="TextBody">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+    <style name="TextCaption">
+        <item name="android:textColor">@color/text_muted</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+    <style name="TextTitle">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="Theme.TMSDriver" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="android:navigationBarColor">@color/background</item>
+    </style>
+</resources>
